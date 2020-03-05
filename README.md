@@ -33,7 +33,7 @@ From this link - [Official Documentation](https://en.beeping.land) - you can acc
 
 ## What Beeping Core is
 
-the **Core System** are libraries that are written in C ++ that are responsible for encrypting and decrypting the data that is transported by ultrasound.
+The **Core System** are libraries that are written in C ++ that are responsible for encrypting and decrypting the data that is transported by ultrasound.
 
 These libraries are written in C ++ and are **Open Source**, so they can be compiled and modified by any engineer.
 
