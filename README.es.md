@@ -2,7 +2,7 @@
 
 # Documentación de Beeping Core
 
-> La documentación de **BeepBox** se puede leer en los siguiente idiomas:
+> Esta página se puede leer en los siguiente idiomas:
 
 [Inglés](README.md) | [Español](README.es.md)
 
