@@ -8,7 +8,7 @@
 
 ## Table of Contents
 
-[Página Web](https://beeping.io) |
+[Website](https://beeping.io) |
 [What Beeping is](#what-beeping-is) |
 [Repositories](#repositories) |
 [Documentation](#documentation) |
