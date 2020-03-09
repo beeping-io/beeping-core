@@ -29,7 +29,7 @@ You can access all these components from our [main repository](https://github.co
 
 ## Documentation
 
-From this link - [Official Documentation](https://en.beeping.land) - you can access all the official **Beeping** documentation.
+From this link - [Official Documentation](https://docs.beeping.io) - you can access all the official **Beeping** documentation.
 
 ## What Beeping Core is
 
@@ -37,7 +37,7 @@ The **Core System** are libraries that are written in C ++ that are responsible 
 
 These libraries are written in C ++ and are **Open Source**, so they can be compiled and modified by any engineer.
 
-To read the steps for installing and using this libary, click on the link to our [official Documentation](https://en.beeping.land).
+To read the steps for installing and using this libary, click on the link to our [official Documentation](https://docs.beeping.io).
 
 ## Releases
 
