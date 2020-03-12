@@ -1,7 +1,7 @@
 #ifndef __SPECTRALANALYSIS__
 #define __SPECTRALANALYSIS__
 
-#include "fftsg.h"
+#include "fftooura/fftsg.h"
 
 namespace BEEPING
 {
