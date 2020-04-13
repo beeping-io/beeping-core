@@ -28,7 +28,7 @@
 
 #include "Globals.h"
 
-static const char version[100] = "BeepingCoreLib version 0.9.7 [31052017]";
+static const char version[100] = "BeepingCoreLib version 1.0.0 [11042020]";
 
 
 using namespace BEEPING;
