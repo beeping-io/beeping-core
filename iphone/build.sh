@@ -21,6 +21,7 @@ build()
 # Directories creation
 mkdir -p build
 mkdir -p lib
+mkdir -p bin
 mkdir -p libs/64
 mkdir -p libs/os
 
@@ -41,12 +42,14 @@ build OS
 mv ./build/Release-iphoneos/libBeepingCore.a libs/os/
 
 # Removing files
-rm -rf build
-rm -rf lib
+rm -rf build/*
+rm -rf lib/*
 
 #Creating Universal Library
 LIPO=$(xcrun -sdk iphoneos -find lipo)
-LIPO -create ./libs/64/libBeepingCore.a  ./libs/os/libBeepingCore.a -output libBeepingCoreUniversal.a
+LIPO -create ./libs/64/libBeepingCore.a ./libs/os/libBeepingCore.a -output bin/libBeepingCoreUniversal.a
 
 # Removing files
+rm -rf build
+rm -rf lib
 rm -rf libs
