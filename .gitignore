@@ -1,0 +1,51 @@
+# Build
+build/
+cmake-build-*/
+out/
+
+# Compiled objects
+*.o
+*.obj
+*.lo
+*.slo
+
+# Libraries
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.lai
+*.la
+
+# Precompiled headers
+*.gch
+*.pch
+
+# Executables
+*.exe
+*.out
+*.app
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# CMake generated
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+CTestTestfile.cmake
+Testing/
+install_manifest.txt
+
+# Node (for commitlint)
+node_modules/
