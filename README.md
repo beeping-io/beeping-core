@@ -1,32 +1,28 @@
-![Beeping Logo](https://beeping.io/?attachment_id=1920)
+# beeping-core
 
-# Beeping Core Documentation
+C++20 library for encoding and decoding data over sound (Data Over Sound).
 
-From this link - [Official Documentation](https://docs.beeping.io) - you can access all the official **Beeping** documentation.
+## Build
 
-## What Beeping Core is
+```bash
+cmake --preset default
+cmake --build --preset default
+ctest --preset default
+```
 
-The **Core System** are libraries that are written in C ++ that are responsible for encrypting and decrypting the data that is transported by ultrasound.
+### Presets
 
-These libraries are written in C ++ and are **Open Source**, so they can be compiled and modified by any engineer.
+| Preset | Description |
+|---|---|
+| `default` | Debug build with tests |
+| `release` | Release build, no tests |
+| `ci` | CI build (debug + tests + compile_commands.json) |
 
-To read the steps for installing and using this libary, click on the link to our [official Documentation](https://docs.beeping.io).
+## Requirements
 
-## Releases
-
-You can access the different **Beeping Core** releases from the [following link](https://github.com/beeping-io/beeping-core/releases).
+- C++20 compiler (Clang 15+, GCC 12+, MSVC 2022+)
+- CMake 3.25+
 
 ## License
 
-**Beeping** is an **Apache License** release, version 2.0, which is an **open source** license.
-
-**Beeping** has chosen to use this license to guarantee your freedom to share and use the technology without any economic charge, and to be sure that this technology is free for all users.
-
-## Quote
-
-> "The two most important days in your life are the day you were born and the day you find out why."
-
-Mark Twain .-
-
-
-
+[Apache-2.0](LICENSE)
