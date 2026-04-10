@@ -1,0 +1,8 @@
+{
+  "private": true,
+  "description": "Dev tooling for beeping-core",
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.0",
+    "@beeping.io/commitlint-config": "^0.1.0"
+  }
+}
