@@ -14,6 +14,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(BUILD_TESTING "Build tests" ON)
 option(BUILD_SHARED_LIBS "Build shared library" OFF)
+option(BEEPING_ENABLE_TSAN "Build with ThreadSanitizer (Clang/GCC only)" OFF)
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(Sanitizers)
 
 # --- Library sources ---
 
@@ -48,6 +52,10 @@ target_include_directories(BeepingCore PUBLIC
 
 target_compile_features(BeepingCore PUBLIC cxx_std_20)
 
+if(BEEPING_ENABLE_TSAN)
+  beeping_enable_tsan(BeepingCore)
+endif()
+
 # --- Install ---
 
 include(GNUInstallDirs)
@@ -81,4 +89,16 @@ if(BUILD_TESTING)
   )
   target_link_libraries(BeepingCoreLifecycleTest PRIVATE BeepingCore)
   add_test(NAME BeepingCoreLifecycleTest COMMAND BeepingCoreLifecycleTest)
+
+  add_executable(ThreadSafetyStressTest
+    tests/ThreadSafetyStressTest.cpp
+  )
+  target_link_libraries(ThreadSafetyStressTest PRIVATE BeepingCore)
+  if(NOT WIN32)
+    target_link_libraries(ThreadSafetyStressTest PRIVATE pthread)
+  endif()
+  if(BEEPING_ENABLE_TSAN)
+    beeping_enable_tsan(ThreadSafetyStressTest)
+  endif()
+  add_test(NAME ThreadSafetyStressTest COMMAND ThreadSafetyStressTest)
 endif()
