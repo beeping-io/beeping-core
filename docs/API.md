@@ -435,7 +435,7 @@ Copies the current frequency spectrum magnitude data into a caller-provided buff
 
 ### Sending (Encoding)
 
-```
+```text
 1. obj = BEEPING_Create()
 2. BEEPING_Configure(mode, 44100.0, bufferSize, obj)
 3. BEEPING_EncodeDataToAudioBuffer("12345", 5, 0, NULL, 0, obj)
@@ -448,7 +448,7 @@ Copies the current frequency spectrum magnitude data into a caller-provided buff
 
 ### Receiving (Decoding)
 
-```
+```text
 1. obj = BEEPING_Create()
 2. BEEPING_Configure(mode, 44100.0, bufferSize, obj)
 3. Loop (feed microphone audio):
@@ -506,6 +506,7 @@ Base class for all encoding variants. Manages the audio buffer where encoded dat
 Base class for all decoding variants. Implements circular buffering, spectral analysis, token detection, and Reed-Solomon error correction.
 
 **Constants:**
+
 - `MAX_DECODE_STRING_SIZE` = 30 (maximum decoded string length)
 
 **Internal struct `sTokenProbs`:** Holds per-token probability statistics used during decoding decisions (token index, energy ratios, tone indices, energy values).
