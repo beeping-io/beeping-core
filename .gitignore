@@ -49,3 +49,6 @@ install_manifest.txt
 
 # Node (for commitlint)
 node_modules/
+
+# Conan (CMakeUserPresets.json is regenerated per machine by `conan install`)
+CMakeUserPresets.json
