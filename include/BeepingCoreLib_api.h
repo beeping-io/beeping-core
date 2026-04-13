@@ -33,15 +33,10 @@
 extern "C" {
 #endif  //__cplusplus
 
-// Use only modes >=2, 0 & 1 are deprecated
 enum BEEPING_MODE {
-  BEEPING_MODE_AUDIBLEOLD = 0,
-  BEEPING_MODE_NONAUDIBLEOLD = 1,
   BEEPING_MODE_AUDIBLE = 2,
-  BEEPING_MODE_NONAUDIBLE = 3,
-  BEEPING_MODE_HIDDEN = 4,
-  BEEPING_MODE_ALL = 5,
-  BEEPING_MODE_CUSTOM = 6
+  BEEPING_MODE_INAUDIBLE = 3,
+  BEEPING_MODE_ALL = 5
 };
 
 ///////////////////////////////////////////
@@ -180,29 +175,10 @@ BEEPING_DLLEXPORT float BEEPING_GetReceivedBeepsVolume(
 BEEPING_DLLEXPORT int32_t BEEPING_GetDecodedMode(void* beepingObject);
 
 /////////////////////////////////////////////////////////////////////////////
-// FOR CUSTOM MODE //////////////////////////////////////////////////////////
-
-BEEPING_DLLEXPORT int32_t BEEPING_SetCustomBaseFreq(float baseFreq,
-                                                    int beepsSeparation,
-                                                    void* beepingObject);
-
-/////////////////////////////////////////////////////////////////////////////
 // Functions to get decoding frequency range (begin range frequency and end
 // range frequency)
 BEEPING_DLLEXPORT float BEEPING_GetDecodingBeginFreq(void* beepingObject);
 BEEPING_DLLEXPORT float BEEPING_GetDecodingEndFreq(void* beepingObject);
-
-/////////////////////////////////////////////////////////////////////////////
-// FOR SYNTH MODE //////////////////////////////////////////////////////////
-
-BEEPING_DLLEXPORT int32_t BEEPING_SetSynthMode(int synthMode,
-                                               void* beepingObject);
-BEEPING_DLLEXPORT int32_t BEEPING_SetSynthVolume(float synthVolume,
-                                                 void* beepingObject);
-
-// Not used
-BEEPING_DLLEXPORT int32_t BEEPING_GetSpectrum(float* spectrumBuffer,
-                                              void* beepingObject);
 
 #ifdef __cplusplus
 }

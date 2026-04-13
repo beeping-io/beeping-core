@@ -28,18 +28,10 @@ set(BEEPING_CORE_SOURCES
   src/BeepingCoreLib_api.cpp
   src/Encoder.cpp
   src/Decoder.cpp
-  src/EncoderAudible.cpp
-  src/DecoderAudible.cpp
-  src/EncoderNonAudible.cpp
-  src/DecoderNonAudible.cpp
   src/EncoderAudibleMultiTone.cpp
   src/DecoderAudibleMultiTone.cpp
   src/EncoderNonAudibleMultiTone.cpp
   src/DecoderNonAudibleMultiTone.cpp
-  src/EncoderHiddenMultiTone.cpp
-  src/DecoderHiddenMultiTone.cpp
-  src/EncoderCustomMultiTone.cpp
-  src/DecoderCustomMultiTone.cpp
   src/DecoderAllMultiTone.cpp
   src/Globals.cpp
   src/SpectralAnalysis.cpp

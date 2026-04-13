@@ -139,42 +139,22 @@ TEST(GetVersion_ContainsBeeping) {
 }
 
 // ===========================================================================
-// 3. CONFIGURE TESTS — all 7 modes
+// 3. CONFIGURE TESTS — all 3 modes
 // ===========================================================================
-
-TEST(Configure_AudibleOld_Success) {
-  ScopedCore c;
-  EXPECT_TRUE(c.configure(BEEPING_MODE_AUDIBLEOLD));
-}
-
-TEST(Configure_NonAudibleOld_Success) {
-  ScopedCore c;
-  EXPECT_TRUE(c.configure(BEEPING_MODE_NONAUDIBLEOLD));
-}
 
 TEST(Configure_Audible_Success) {
   ScopedCore c;
   EXPECT_TRUE(c.configure(BEEPING_MODE_AUDIBLE));
 }
 
-TEST(Configure_NonAudible_Success) {
+TEST(Configure_Inaudible_Success) {
   ScopedCore c;
-  EXPECT_TRUE(c.configure(BEEPING_MODE_NONAUDIBLE));
-}
-
-TEST(Configure_Hidden_Success) {
-  ScopedCore c;
-  EXPECT_TRUE(c.configure(BEEPING_MODE_HIDDEN));
+  EXPECT_TRUE(c.configure(BEEPING_MODE_INAUDIBLE));
 }
 
 TEST(Configure_All_Success) {
   ScopedCore c;
   EXPECT_TRUE(c.configure(BEEPING_MODE_ALL));
-}
-
-TEST(Configure_Custom_Success) {
-  ScopedCore c;
-  EXPECT_TRUE(c.configure(BEEPING_MODE_CUSTOM));
 }
 
 TEST(Configure_InvalidMode_Fails) {
@@ -191,8 +171,8 @@ TEST(Configure_48kHz_Success) {
 TEST(Configure_Reconfigure_Success) {
   ScopedCore c;
   EXPECT_TRUE(c.configure(BEEPING_MODE_AUDIBLE));
-  EXPECT_TRUE(c.configure(BEEPING_MODE_NONAUDIBLE));
-  EXPECT_TRUE(c.configure(BEEPING_MODE_HIDDEN));
+  EXPECT_TRUE(c.configure(BEEPING_MODE_INAUDIBLE));
+  EXPECT_TRUE(c.configure(BEEPING_MODE_ALL));
 }
 
 // ===========================================================================
@@ -206,37 +186,9 @@ TEST(Encode_Audible_ProducesSamples) {
   EXPECT_GT(samples, 0);
 }
 
-TEST(Encode_NonAudible_ProducesSamples) {
+TEST(Encode_Inaudible_ProducesSamples) {
   ScopedCore c;
-  c.configure(BEEPING_MODE_NONAUDIBLE);
-  int samples = c.encode("123456789");
-  EXPECT_GT(samples, 0);
-}
-
-TEST(Encode_Hidden_ProducesSamples) {
-  ScopedCore c;
-  c.configure(BEEPING_MODE_HIDDEN);
-  int samples = c.encode("123456789");
-  EXPECT_GT(samples, 0);
-}
-
-TEST(Encode_Custom_ProducesSamples) {
-  ScopedCore c;
-  c.configure(BEEPING_MODE_CUSTOM);
-  int samples = c.encode("123456789");
-  EXPECT_GT(samples, 0);
-}
-
-TEST(Encode_AudibleOld_ProducesSamples) {
-  ScopedCore c;
-  c.configure(BEEPING_MODE_AUDIBLEOLD);
-  int samples = c.encode("123456789");
-  EXPECT_GT(samples, 0);
-}
-
-TEST(Encode_NonAudibleOld_ProducesSamples) {
-  ScopedCore c;
-  c.configure(BEEPING_MODE_NONAUDIBLEOLD);
+  c.configure(BEEPING_MODE_INAUDIBLE);
   int samples = c.encode("123456789");
   EXPECT_GT(samples, 0);
 }
@@ -400,85 +352,7 @@ TEST(GetDecodedMode_ReturnsValid) {
 }
 
 // ===========================================================================
-// 7. CUSTOM MODE TESTS
-// ===========================================================================
-
-TEST(CustomMode_SetBaseFreq) {
-  ScopedCore c;
-  c.configure(BEEPING_MODE_CUSTOM);
-  int rc = BEEPING_SetCustomBaseFreq(15000.0f, 2, c.handle);
-  EXPECT_EQ(rc, 0);
-  // Should be able to encode after reconfiguration
-  int samples = c.encode("123456789");
-  EXPECT_GT(samples, 0);
-}
-
-TEST(CustomMode_SetBaseFreq_NonCustomMode_NoReconfigure) {
-  ScopedCore c;
-  c.configure(BEEPING_MODE_AUDIBLE);
-  // Setting custom freq on non-custom mode stores params but doesn't
-  // recreate encoder/decoder
-  int rc = BEEPING_SetCustomBaseFreq(15000.0f, 2, c.handle);
-  EXPECT_EQ(rc, 0);
-  // Should still be able to encode in audible mode
-  int samples = c.encode("123456789");
-  EXPECT_GT(samples, 0);
-}
-
-TEST(CustomMode_DifferentFreqs_DifferentAudio) {
-  ScopedCore c1;
-  c1.configure(BEEPING_MODE_CUSTOM);
-  BEEPING_SetCustomBaseFreq(12000.0f, 1, c1.handle);
-  c1.encode("123456789");
-  auto audio1 = c1.drainEncoded();
-
-  ScopedCore c2;
-  c2.configure(BEEPING_MODE_CUSTOM);
-  BEEPING_SetCustomBaseFreq(16000.0f, 3, c2.handle);
-  c2.encode("123456789");
-  auto audio2 = c2.drainEncoded();
-
-  // Different base freqs should produce different audio
-  bool differ = false;
-  size_t minLen = std::min(audio1.size(), audio2.size());
-  for (size_t i = 0; i < minLen; i++) {
-    if (audio1[i] != audio2[i]) {
-      differ = true;
-      break;
-    }
-  }
-  EXPECT_TRUE(differ);
-}
-
-// ===========================================================================
-// 8. SYNTH MODE TESTS
-// ===========================================================================
-
-TEST(SynthMode_SetMode) {
-  ScopedCore c;
-  c.configure(BEEPING_MODE_AUDIBLE);
-  EXPECT_EQ(BEEPING_SetSynthMode(1, c.handle), 0);
-}
-
-TEST(SynthMode_SetVolume) {
-  ScopedCore c;
-  c.configure(BEEPING_MODE_AUDIBLE);
-  EXPECT_EQ(BEEPING_SetSynthVolume(-6.0f, c.handle), 0);
-}
-
-TEST(SynthMode_EncodeWithSynth) {
-  ScopedCore c;
-  c.configure(BEEPING_MODE_AUDIBLE);
-  BEEPING_SetSynthMode(1, c.handle);
-  BEEPING_SetSynthVolume(-3.0f, c.handle);
-  int samples = c.encode("123456789", 1);  // type=1 robotic
-  EXPECT_GT(samples, 0);
-  auto audio = c.drainEncoded();
-  EXPECT_EQ(static_cast<int>(audio.size()), samples);
-}
-
-// ===========================================================================
-// 9. FREQUENCY RANGE TESTS
+// 7. FREQUENCY RANGE TESTS
 // ===========================================================================
 
 TEST(FreqRange_Audible_DoesNotCrash) {
@@ -491,38 +365,26 @@ TEST(FreqRange_Audible_DoesNotCrash) {
   EXPECT_GE(end, 0.0f);
 }
 
-TEST(FreqRange_Custom_ReflectsBaseFreq) {
-  ScopedCore c;
-  c.configure(BEEPING_MODE_CUSTOM);
-  float defaultBegin = BEEPING_GetDecodingBeginFreq(c.handle);
-
-  BEEPING_SetCustomBaseFreq(15000.0f, 1, c.handle);
-  float newBegin = BEEPING_GetDecodingBeginFreq(c.handle);
-
-  // New base freq should shift the range
-  EXPECT_NE(defaultBegin, newBegin);
-}
-
 // ===========================================================================
-// 10. INSTANCE ISOLATION TESTS
+// 8. INSTANCE ISOLATION TESTS
 // ===========================================================================
 
 TEST(Isolation_TwoModes_NoInterference) {
   ScopedCore audible;
   audible.configure(BEEPING_MODE_AUDIBLE);
 
-  ScopedCore hidden;
-  hidden.configure(BEEPING_MODE_HIDDEN);
+  ScopedCore inaudible;
+  inaudible.configure(BEEPING_MODE_INAUDIBLE);
 
   // Encode same payload in both
   int s1 = audible.encode("123456789");
-  int s2 = hidden.encode("123456789");
+  int s2 = inaudible.encode("123456789");
 
   EXPECT_GT(s1, 0);
   EXPECT_GT(s2, 0);
 
   auto audio1 = audible.drainEncoded();
-  auto audio2 = hidden.drainEncoded();
+  auto audio2 = inaudible.drainEncoded();
 
   // Different modes should produce different audio
   bool differ = false;
@@ -536,38 +398,8 @@ TEST(Isolation_TwoModes_NoInterference) {
   EXPECT_TRUE(differ);
 }
 
-TEST(Isolation_SynthMode_PerInstance) {
-  ScopedCore c1;
-  c1.configure(BEEPING_MODE_AUDIBLE);
-  BEEPING_SetSynthMode(1, c1.handle);
-  BEEPING_SetSynthVolume(-3.0f, c1.handle);
-
-  ScopedCore c2;
-  c2.configure(BEEPING_MODE_AUDIBLE);
-  // c2 should NOT be affected by c1's synth settings
-
-  // Encode type=1 (robotic) with synth in c1
-  c1.encode("123456789", 1);
-  auto audio1 = c1.drainEncoded();
-
-  // Encode type=0 (plain) in c2
-  c2.encode("123456789", 0);
-  auto audio2 = c2.drainEncoded();
-
-  // Should be different due to different synth settings
-  bool differ = false;
-  size_t minLen = std::min(audio1.size(), audio2.size());
-  for (size_t i = 0; i < minLen; i++) {
-    if (audio1[i] != audio2[i]) {
-      differ = true;
-      break;
-    }
-  }
-  EXPECT_TRUE(differ);
-}
-
 // ===========================================================================
-// 11. AUDIO SIGNATURE TESTS
+// 9. AUDIO SIGNATURE TESTS
 // ===========================================================================
 
 TEST(AudioSignature_SetAndEncode) {
@@ -599,7 +431,7 @@ TEST(AudioSignature_ClearWithNull) {
 }
 
 // ===========================================================================
-// 12. EDGE CASES
+// 10. EDGE CASES
 // ===========================================================================
 
 TEST(Encode_ShortPayload) {
@@ -648,14 +480,12 @@ TEST(Encode_MultipleSequential) {
 }
 
 // ===========================================================================
-// 13. ALL MODES ENCODE-DRAIN SWEEP
+// 11. ALL MODES ENCODE-DRAIN SWEEP — all 3 modes
 // ===========================================================================
 
 TEST(AllModes_EncodeDrain) {
-  const int modes[] = {BEEPING_MODE_AUDIBLEOLD, BEEPING_MODE_NONAUDIBLEOLD,
-                       BEEPING_MODE_AUDIBLE,    BEEPING_MODE_NONAUDIBLE,
-                       BEEPING_MODE_HIDDEN,     BEEPING_MODE_ALL,
-                       BEEPING_MODE_CUSTOM};
+  const int modes[] = {BEEPING_MODE_AUDIBLE, BEEPING_MODE_INAUDIBLE,
+                       BEEPING_MODE_ALL};
   for (int mode : modes) {
     ScopedCore c;
     EXPECT_TRUE(c.configure(mode));

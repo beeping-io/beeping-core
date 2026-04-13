@@ -75,8 +75,7 @@ DecoderNonAudibleMultiTone::DecoderNonAudibleMultiTone(
                                              &idxTonesFrontDoorToken2);
 
   mDecodingMode = Globals::
-      /*DECODING_MODE::*/ DECODING_MODE_NONAUDIBLE;  // 0=AUDIBLE, 1=NONAUDIBLE,
-                                                     // 2=HIDDEN, 3=CUSTOM
+      /*DECODING_MODE::*/ DECODING_MODE_INAUDIBLE;  // 0=AUDIBLE, 1=INAUDIBLE
   BTRACE(
       "DecoderNonAudibleMultiTone::ctor sr=%.1f buf=%d win=%d tokens=%d "
       "tones=%d",

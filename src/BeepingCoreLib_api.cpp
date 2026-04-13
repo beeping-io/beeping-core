@@ -2,17 +2,9 @@
 #include <BeepingCoreLib_api.h>
 #include <BeepingDebug.h>
 #include <DecoderAllMultiTone.h>
-#include <DecoderAudible.h>
 #include <DecoderAudibleMultiTone.h>
-#include <DecoderCustomMultiTone.h>
-#include <DecoderHiddenMultiTone.h>
-#include <DecoderNonAudible.h>
 #include <DecoderNonAudibleMultiTone.h>
-#include <EncoderAudible.h>
 #include <EncoderAudibleMultiTone.h>
-#include <EncoderCustomMultiTone.h>
-#include <EncoderHiddenMultiTone.h>
-#include <EncoderNonAudible.h>
 #include <EncoderNonAudibleMultiTone.h>
 #include <Globals.h>
 #include <stdio.h>
@@ -136,52 +128,20 @@ extern "C"
 
   beeping->config = compute_config(beeping->mWindowSize, samplingRate);
 
-  if (mode == /*BEEPING_MODE::*/ BEEPING_MODE_AUDIBLEOLD)  // Audible
-  {
-    beeping->mEncoder = new EncoderAudible(beeping->config, samplingRate,
-                                           bufferSize, beeping->mWindowSize);
-    beeping->mDecoder = new DecoderAudible(beeping->config, samplingRate,
-                                           bufferSize, beeping->mWindowSize);
-  } else if (mode ==
-             /*BEEPING_MODE::*/ BEEPING_MODE_NONAUDIBLEOLD)  // Non audible
-  {
-    beeping->mEncoder = new EncoderNonAudible(beeping->config, samplingRate,
-                                              bufferSize, beeping->mWindowSize);
-    beeping->mDecoder = new DecoderNonAudible(beeping->config, samplingRate,
-                                              bufferSize, beeping->mWindowSize);
-  } else if (mode ==
-             /*BEEPING_MODE::*/ BEEPING_MODE_AUDIBLE)  // Audible Multi-Tone
-  {
+  if (mode == BEEPING_MODE_AUDIBLE) {
     beeping->mEncoder = new EncoderAudibleMultiTone(
         beeping->config, samplingRate, bufferSize, beeping->mWindowSize);
     beeping->mDecoder = new DecoderAudibleMultiTone(
         beeping->config, samplingRate, bufferSize, beeping->mWindowSize);
-  } else if (mode == /*BEEPING_MODE::*/ BEEPING_MODE_NONAUDIBLE)  // NonAudible
-                                                                  // Multi-Tone
-  {
+  } else if (mode == BEEPING_MODE_INAUDIBLE) {
     beeping->mEncoder = new EncoderNonAudibleMultiTone(
         beeping->config, samplingRate, bufferSize, beeping->mWindowSize);
     beeping->mDecoder = new DecoderNonAudibleMultiTone(
         beeping->config, samplingRate, bufferSize, beeping->mWindowSize);
-  } else if (mode ==
-             /*BEEPING_MODE::*/ BEEPING_MODE_HIDDEN)  // Hidden Multi-Tone
-  {
-    beeping->mEncoder = new EncoderHiddenMultiTone(
-        beeping->config, samplingRate, bufferSize, beeping->mWindowSize);
-    beeping->mDecoder = new DecoderHiddenMultiTone(
-        beeping->config, samplingRate, bufferSize, beeping->mWindowSize);
-  } else if (mode == /*BEEPING_MODE::*/ BEEPING_MODE_ALL)  // All modes decoded
-                                                           // simultaneously
-  {
+  } else if (mode == BEEPING_MODE_ALL) {
     beeping->mEncoder = new EncoderNonAudibleMultiTone(
         beeping->config, samplingRate, bufferSize, beeping->mWindowSize);
     beeping->mDecoder = new DecoderAllMultiTone(
-        beeping->config, samplingRate, bufferSize, beeping->mWindowSize);
-  } else if (mode == /*BEEPING_MODE::*/ BEEPING_MODE_CUSTOM)  // Custom mode
-  {
-    beeping->mEncoder = new EncoderCustomMultiTone(
-        beeping->config, samplingRate, bufferSize, beeping->mWindowSize);
-    beeping->mDecoder = new DecoderCustomMultiTone(
         beeping->config, samplingRate, bufferSize, beeping->mWindowSize);
   } else {
     // error
@@ -332,58 +292,10 @@ extern "C"
     int32_t BEEPING_GetDecodedMode(void* beepingObject) {
   BeepingContext* beeping = (BeepingContext*)beepingObject;
 
-  //(AUDIBLE = 0, NONAUDIBLE = 1, HIDDEN = 2, CUSTOM = 3)
+  //(AUDIBLE = 0, INAUDIBLE = 1)
   int32_t result = beeping->mDecoder->GetDecodedMode();
   BTRACE("BEEPING_GetDecodedMode -> %d", result);
   return result;
-}
-
-#ifdef __cplusplus
-extern "C"
-#endif  //__cplusplus
-    int32_t BEEPING_GetSpectrum(float* spectrumBuffer, void* beepingObject) {
-  BeepingContext* beeping = (BeepingContext*)beepingObject;
-
-  int32_t result = beeping->mDecoder->GetSpectrum(spectrumBuffer);
-  BTRACE("BEEPING_GetSpectrum -> %d bins", result);
-  return result;
-}
-
-#ifdef __cplusplus
-extern "C"
-#endif  //__cplusplus
-    int32_t BEEPING_SetCustomBaseFreq(float baseFreq, int beepsSeparation,
-                                      void* beepingObject) {
-  BINFO("BEEPING_SetCustomBaseFreq freq=%.1f sep=%d", baseFreq,
-        beepsSeparation);
-  BeepingContext* beeping = (BeepingContext*)beepingObject;
-
-  beeping->config.freqBaseForCustomMultiTone = baseFreq;
-  beeping->config.beepsSeparationForCustomMultiTone = beepsSeparation;
-  recompute_custom_offsets(beeping->config, beeping->mWindowSize);
-
-  if (beeping->mDecoder && beeping->mDecoder->mDecodingMode ==
-                               Globals::DECODING_MODE_CUSTOM)  // Custom mode
-  {
-    if (beeping->mEncoder) {
-      delete beeping->mEncoder;
-      beeping->mEncoder = nullptr;
-    }
-
-    if (beeping->mDecoder) {
-      delete beeping->mDecoder;
-      beeping->mDecoder = nullptr;
-    }
-
-    beeping->mEncoder =
-        new EncoderCustomMultiTone(beeping->config, beeping->mSampleRate,
-                                   beeping->mBufferSize, beeping->mWindowSize);
-    beeping->mDecoder =
-        new DecoderCustomMultiTone(beeping->config, beeping->mSampleRate,
-                                   beeping->mBufferSize, beeping->mWindowSize);
-  }
-
-  return 0;  // should return real custom freq after quantization
 }
 
 #ifdef __cplusplus
@@ -406,28 +318,4 @@ extern "C"
   float result = beeping->mDecoder->GetDecodingEndFreq();
   BTRACE("BEEPING_GetDecodingEndFreq -> %.1f", result);
   return result;
-}
-
-#ifdef __cplusplus
-extern "C"
-#endif  //__cplusplus
-    int32_t BEEPING_SetSynthMode(int synthMode, void* beepingObject) {
-  BDEBUG("BEEPING_SetSynthMode mode=%d", synthMode);
-  BeepingContext* beeping = (BeepingContext*)beepingObject;
-
-  beeping->config.synthMode = synthMode;
-
-  return 0;
-}
-
-#ifdef __cplusplus
-extern "C"
-#endif  //__cplusplus
-    int32_t BEEPING_SetSynthVolume(float synthVolume, void* beepingObject) {
-  BDEBUG("BEEPING_SetSynthVolume vol=%.2f", synthVolume);
-  BeepingContext* beeping = (BeepingContext*)beepingObject;
-
-  beeping->config.synthVolume = synthVolume;
-
-  return 0;
 }

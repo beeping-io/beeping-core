@@ -20,19 +20,17 @@ constexpr int kInstancesPerThread = 4;
 constexpr int kBufferSize = 1024;
 
 constexpr int kModes[] = {
-    BEEPING_MODE_AUDIBLE,       BEEPING_MODE_NONAUDIBLE,
-    BEEPING_MODE_HIDDEN,        BEEPING_MODE_CUSTOM,
-    BEEPING_MODE_ALL,           BEEPING_MODE_AUDIBLEOLD,
-    BEEPING_MODE_NONAUDIBLEOLD,
-    BEEPING_MODE_AUDIBLE // wrap
+    BEEPING_MODE_AUDIBLE,
+    BEEPING_MODE_INAUDIBLE,
+    BEEPING_MODE_ALL,
 };
 constexpr int kNumModes = sizeof(kModes) / sizeof(kModes[0]);
 
-void worker(int threadId, std::atomic<int> &failures) {
+void worker(int threadId, std::atomic<int>& failures) {
   for (int inst = 0; inst < kInstancesPerThread; ++inst) {
     int mode = kModes[(threadId + inst) % kNumModes];
 
-    void *core = BEEPING_Create();
+    void* core = BEEPING_Create();
     if (!core) {
       failures.fetch_add(1, std::memory_order_relaxed);
       return;
@@ -43,11 +41,6 @@ void worker(int threadId, std::atomic<int> &failures) {
       failures.fetch_add(1, std::memory_order_relaxed);
       BEEPING_Destroy(core);
       continue;
-    }
-
-    if (mode == BEEPING_MODE_CUSTOM) {
-      BEEPING_SetCustomBaseFreq(13000.0f + threadId * 100.0f,
-                                1 + (threadId % 3), core);
     }
 
     // Encode
@@ -68,14 +61,12 @@ void worker(int threadId, std::atomic<int> &failures) {
     int drained = 0;
     while (true) {
       int n = BEEPING_GetEncodedAudioBuffer(audioBuf, core);
-      if (n <= 0)
-        break;
+      if (n <= 0) break;
 
       // Feed to decoder
       BEEPING_DecodeAudioBuffer(audioBuf, n, core);
 
-      if (++drained > 10000)
-        break;
+      if (++drained > 10000) break;
     }
 
     // Query confidence (exercises more API surface)
@@ -94,7 +85,7 @@ void worker(int threadId, std::atomic<int> &failures) {
   }
 }
 
-} // namespace
+}  // namespace
 
 int main() {
   std::atomic<int> failures{0};
@@ -104,12 +95,12 @@ int main() {
   for (int i = 0; i < kThreads; ++i) {
     threads.emplace_back(worker, i, std::ref(failures));
   }
-  for (auto &t : threads)
-    t.join();
+  for (auto& t : threads) t.join();
 
   int f = failures.load();
-  std::printf("ConcurrentInstancesTest: threads=%d instances_per_thread=%d "
-              "failures=%d\n",
-              kThreads, kInstancesPerThread, f);
+  std::printf(
+      "ConcurrentInstancesTest: threads=%d instances_per_thread=%d "
+      "failures=%d\n",
+      kThreads, kInstancesPerThread, f);
   return f == 0 ? 0 : 1;
 }
