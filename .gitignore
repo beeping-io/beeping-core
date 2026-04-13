@@ -55,3 +55,4 @@ node_modules/
 
 # Conan (CMakeUserPresets.json is regenerated per machine by `conan install`)
 CMakeUserPresets.json
+build-lint/

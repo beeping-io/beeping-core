@@ -32,30 +32,10 @@ Decoder::Decoder(const BeepingConfig& config, float samplingRate, int buffSize,
   mBufferSize = buffSize;
   mWindowSize = windowSize;
 
-  // decide hopsize and windowSize depending on sampleRate
-
-  if (mSampleRate == 44100.0) {
-    mHopSize = 256;
-    // mHopSize = 512;
-  } else if (mSampleRate == 22050.0) {
-#ifdef TARGET_OS_IPHONE
-    mHopSize = 128;  // high cpu //was 64
-#else
-    mHopSize = 128;  // low cpu
-#endif
-    // mHopSize = 256;
-  } else if (mSampleRate == 11050.0) {
-#ifdef TARGET_OS_IPHONE
-    mHopSize = 64;  // high cpu //was 32
-#else
-    mHopSize = 64;  // low cpu
-#endif
-    // mHopSize = 128;
-  } else  // not tested
-  {
-    // invalid samplerate
-    mHopSize = 64;
-  }
+  // Parametric hop size: windowSize/8 gives ~5.8ms per hop at any rate.
+  // At 44100/2048: 256 (matches original). At 96000/4096: 512.
+  mHopSize = mWindowSize / 8;
+  if (mHopSize < 32) mHopSize = 32;
 
   // fftSize = windowSize
   mSpectralAnalysis = new SpectralAnalysis(

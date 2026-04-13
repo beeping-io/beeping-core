@@ -105,16 +105,19 @@ extern "C"
   beeping->mSampleRate = samplingRate;
   beeping->mBufferSize = bufferSize;
 
-  if (beeping->mSampleRate == 48000.0)
-    beeping->mWindowSize = 2048;
-  else if (beeping->mSampleRate == 44100.0)
-    beeping->mWindowSize = 2048;
-  else if (beeping->mSampleRate == 22050.0)  // not valid!!
-    beeping->mWindowSize = 1024;
-  else if (beeping->mSampleRate == 11050.0)  // not valid!!
-    beeping->mWindowSize = 512;
-  else  // not tested
-    beeping->mWindowSize = 256;
+  // Parametric window size: power-of-2 closest to (sampleRate * 2048/44100).
+  // Keeps bin-to-Hz ratio ~constant across all rates for consistent
+  // frequency resolution. At 44100→2048, 48000→2048, 96000→4096, 32000→1024.
+  {
+    float idealWindow = samplingRate * 2048.0f / 44100.0f;
+    int winSize = 256;
+    while (winSize < static_cast<int>(idealWindow)) winSize *= 2;
+    int lowerPow = winSize / 2;
+    if (lowerPow >= 256 && (idealWindow - lowerPow) < (winSize - idealWindow)) {
+      winSize = lowerPow;
+    }
+    beeping->mWindowSize = winSize;
+  }
 
   if (beeping->mEncoder) {
     delete beeping->mEncoder;

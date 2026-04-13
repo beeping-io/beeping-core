@@ -3,13 +3,13 @@
 
 namespace BEEPING {
 
-BeepingConfig compute_config(int windowSize, float /*sampleRate*/) {
+BeepingConfig compute_config(int windowSize, float sampleRate) {
   BeepingConfig cfg;
 
-  // freq2Bin hardcoded at 44100 — separation of beeps in bins is constant
-  // regardless of actual sample rate (decoder is mostly at 44.1kHz).
-  // BEE-23 will make sample rate parametric and use this argument.
-  float freq2Bin = (float)windowSize / 44100.f;
+  // freq2Bin converts Hz to FFT bin index: bin = freq * freq2Bin.
+  // Using the actual sample rate ensures correct frequency mapping
+  // at any rate (44100, 48000, 96000, 32000, etc.)
+  float freq2Bin = (float)windowSize / sampleRate;
 
   cfg.nBinsOffsetForAudibleMultiTone = 12;
   cfg.freqOffsetForAudibleMultiTone =
@@ -19,10 +19,11 @@ BeepingConfig compute_config(int windowSize, float /*sampleRate*/) {
   cfg.freqOffsetForNonAudibleMultiTone =
       (float)cfg.nBinsOffsetForNonAudibleMultiTone / freq2Bin;
 
-  BDEBUG("compute_config windowSize=%d -> freq2Bin=%.6f", windowSize, freq2Bin);
+  BDEBUG("compute_config windowSize=%d sampleRate=%.0f freq2Bin=%.6f",
+         windowSize, sampleRate, freq2Bin);
   BDEBUG("  audible: nBins=%d freqOffset=%.4f",
          cfg.nBinsOffsetForAudibleMultiTone, cfg.freqOffsetForAudibleMultiTone);
-  BDEBUG("  nonAudible: nBins=%d freqOffset=%.4f",
+  BDEBUG("  inaudible: nBins=%d freqOffset=%.4f",
          cfg.nBinsOffsetForNonAudibleMultiTone,
          cfg.freqOffsetForNonAudibleMultiTone);
 
