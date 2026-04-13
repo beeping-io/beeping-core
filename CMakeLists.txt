@@ -123,3 +123,28 @@ if(BUILD_TESTING)
   include(Catch)
   catch_discover_tests(BeepingCoreTests)
 endif()
+
+# --- Benchmarks (Google Benchmark) ---
+
+option(BEEPING_BUILD_BENCHMARKS "Build performance benchmarks" OFF)
+
+if(BEEPING_BUILD_BENCHMARKS)
+  set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+  set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
+  FetchContent_Declare(
+    benchmark
+    GIT_REPOSITORY https://github.com/google/benchmark.git
+    GIT_TAG        v1.9.1
+    GIT_SHALLOW    TRUE
+  )
+  FetchContent_MakeAvailable(benchmark)
+
+  add_executable(BeepingCoreBenchmarks
+    benchmarks/benchmarks.cpp
+  )
+  target_link_libraries(BeepingCoreBenchmarks PRIVATE BeepingCore benchmark::benchmark)
+  target_include_directories(BeepingCoreBenchmarks PRIVATE
+    ${spdlog_SOURCE_DIR}/include
+  )
+  target_compile_definitions(BeepingCoreBenchmarks PRIVATE SPDLOG_HEADER_ONLY)
+endif()
