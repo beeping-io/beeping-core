@@ -2,8 +2,7 @@
 
 #include <cassert>
 
-int main()
-{
+int main() {
   void* core = BEEPING_Create();
   assert(core != nullptr);
 

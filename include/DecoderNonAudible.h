@@ -1,47 +1,48 @@
 #ifndef __DECODERNONAUDIBLE__
 #define __DECODERNONAUDIBLE__
 
-#include <vector>
-
 #include <Decoder.h>
 
-#define MAX_DECODE_STRING_SIZE 30 //max decoded string size is 30
+#include <vector>
 
-namespace BEEPING
-{
-  class SpectralAnalysis;
-  class ReedSolomon;
-  //class Decoder;
+#define MAX_DECODE_STRING_SIZE 30  // max decoded string size is 30
 
-  class DecoderNonAudible: public Decoder
-  {
-  public:
-    DecoderNonAudible(float sr, int buffsize, int windowSize);
-    ~DecoderNonAudible(void);
+namespace BEEPING {
+class SpectralAnalysis;
+class ReedSolomon;
+// class Decoder;
 
-    int mSizeNighbBins;
-    int mSizeNeighbTokenBinAnal;
-    float *mEvalNeighbTokenMags;
+class DecoderNonAudible : public Decoder {
+ public:
+  DecoderNonAudible(float sr, int buffsize, int windowSize);
+  ~DecoderNonAudible(void);
 
-    int DecodeAudioBuffer(float *audioBuffer, int size);
-    int GetDecodedData(char *stringDecoded);
+  int mSizeNighbBins;
+  int mSizeNeighbTokenBinAnal;
+  float* mEvalNeighbTokenMags;
 
-    int GetSpectrum(float *spectrumBuffer);
-    
-    int AnalyzeStartTokens(float *audioBuffer);
-    int AnalyzeToken(float *audioBuffer);
+  int DecodeAudioBuffer(float* audioBuffer, int size);
+  int GetDecodedData(char* stringDecoded);
 
-    int ComputeStatsStartTokens(void);
-    int ComputeStats(void);
+  int GetSpectrum(float* spectrumBuffer);
 
-    int getSizeFilledFrameCircularBuffer();
-    int getSizeFilledBlockCircularBuffer();
-       
-    int DeReverbToken(const int nbins, int *freqsBins);
-    
-    float ComputeBlockMagSpecSumsCurrentToken(int midFreqBin, int width, int nbins, std::vector<float> &sumPerFrame);
-    float ComputeBlockMagSpecSumsLastToken(int midFreqBin, int width, int nbins, std::vector<float> &sumPerFrame);
-  };
-}
+  int AnalyzeStartTokens(float* audioBuffer);
+  int AnalyzeToken(float* audioBuffer);
 
-#endif //__DECODERNONAUDIBLE__
+  int ComputeStatsStartTokens(void);
+  int ComputeStats(void);
+
+  int getSizeFilledFrameCircularBuffer();
+  int getSizeFilledBlockCircularBuffer();
+
+  int DeReverbToken(const int nbins, int* freqsBins);
+
+  float ComputeBlockMagSpecSumsCurrentToken(int midFreqBin, int width,
+                                            int nbins,
+                                            std::vector<float>& sumPerFrame);
+  float ComputeBlockMagSpecSumsLastToken(int midFreqBin, int width, int nbins,
+                                         std::vector<float>& sumPerFrame);
+};
+}  // namespace BEEPING
+
+#endif  //__DECODERNONAUDIBLE__

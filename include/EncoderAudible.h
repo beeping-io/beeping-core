@@ -3,18 +3,17 @@
 
 #include <Encoder.h>
 
-namespace BEEPING
-{
-  class EncoderAudible : public Encoder
-  {
-  public:
-    EncoderAudible(float samplingRate, int buffsize, int windowSize);
-    ~EncoderAudible(void);
+namespace BEEPING {
+class EncoderAudible : public Encoder {
+ public:
+  EncoderAudible(float samplingRate, int buffsize, int windowSize);
+  ~EncoderAudible(void);
 
-    int EncodeDataToAudioBuffer(const char *stringToEncode, int type, int size, const char *melodyString, int melodySize);
-    int GetEncodedAudioBuffer(float *audioBuffer);
-    int ResetEncodedAudioBuffer();
-  };
-}
+  int EncodeDataToAudioBuffer(const char* stringToEncode, int type, int size,
+                              const char* melodyString, int melodySize);
+  int GetEncodedAudioBuffer(float* audioBuffer);
+  int ResetEncodedAudioBuffer();
+};
+}  // namespace BEEPING
 
-#endif //__ENCODERAUDIBLE__
+#endif  //__ENCODERAUDIBLE__

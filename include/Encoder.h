@@ -1,42 +1,42 @@
 #ifndef __ENCODER__
 #define __ENCODER__
 
-namespace BEEPING
-{
-  class ReedSolomon;
+namespace BEEPING {
+class ReedSolomon;
 
-  class Encoder
-  {
-  public:
-    Encoder(float samplingRate, int buffsize, int windowSize, int numTokens, int numTones);
-    ~Encoder(void);
+class Encoder {
+ public:
+  Encoder(float samplingRate, int buffsize, int windowSize, int numTokens,
+          int numTones);
+  ~Encoder(void);
 
-    int SetAudioSignature(int samplesSize, const float *samplesBuffer);
+  int SetAudioSignature(int samplesSize, const float* samplesBuffer);
 
-    ReedSolomon *mReedSolomon;
-    virtual int EncodeDataToAudioBuffer(const char *stringToEncode, int type, int size, const char *melodyString, int melodySize);
-    int GetEncodedAudioBuffer(float *audioBuffer);
-    int ResetEncodedAudioBuffer();
-        
-    //float fastSin(float x);
+  ReedSolomon* mReedSolomon;
+  virtual int EncodeDataToAudioBuffer(const char* stringToEncode, int type,
+                                      int size, const char* melodyString,
+                                      int melodySize);
+  int GetEncodedAudioBuffer(float* audioBuffer);
+  int ResetEncodedAudioBuffer();
 
-    int mnAudioSignatureSamples;
-    float *mAudioSignature;
+  // float fastSin(float x);
 
-    float *mAudioBufferEncodedString;
+  int mnAudioSignatureSamples;
+  float* mAudioSignature;
 
-    int mNumTokens;
-    int mNumTones;
+  float* mAudioBufferEncodedString;
 
-    float mSampleRate;
-    int mReadIndexEncodedAudioBuffer;
-    int mNumMaxSamplesEncodedString;
-    int mNumSamplesEncodedString;
-    int mBufferSize;
+  int mNumTokens;
+  int mNumTones;
 
-    int mWindowSize;
+  float mSampleRate;
+  int mReadIndexEncodedAudioBuffer;
+  int mNumMaxSamplesEncodedString;
+  int mNumSamplesEncodedString;
+  int mBufferSize;
 
-  };
-}
+  int mWindowSize;
+};
+}  // namespace BEEPING
 
-#endif //__ENCODER__
+#endif  //__ENCODER__

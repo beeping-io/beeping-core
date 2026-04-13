@@ -22,8 +22,7 @@ constexpr int kThreads = 8;
 constexpr int kItersPerThread = 25;
 constexpr int kBufferSize = 1024;
 
-void worker(int threadId, std::atomic<int>& failures)
-{
+void worker(int threadId, std::atomic<int>& failures) {
   for (int iter = 0; iter < kItersPerThread; ++iter) {
     void* core = BEEPING_Create();
     if (core == nullptr) {
@@ -31,7 +30,8 @@ void worker(int threadId, std::atomic<int>& failures)
       return;
     }
 
-    int rc = BEEPING_Configure(BEEPING_MODE_AUDIBLE, 44100.0f, kBufferSize, core);
+    int rc =
+        BEEPING_Configure(BEEPING_MODE_AUDIBLE, 44100.0f, kBufferSize, core);
     if (rc < 0) {
       failures.fetch_add(1, std::memory_order_relaxed);
       BEEPING_Destroy(core);
@@ -56,10 +56,9 @@ void worker(int threadId, std::atomic<int>& failures)
   }
 }
 
-} // namespace
+}  // namespace
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
   bool singleThreaded = (argc > 1 && std::strcmp(argv[1], "--single") == 0);
   int nThreads = singleThreaded ? 1 : kThreads;
 

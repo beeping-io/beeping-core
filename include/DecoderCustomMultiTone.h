@@ -1,53 +1,54 @@
 #ifndef __DECODERCUSTOMMULTITONE__
 #define __DECODERCUSTOMMULTITONE__
 
-#include <vector>
-
 #include <Decoder.h>
 
-#define MAX_DECODE_STRING_SIZE 30 //max decoded string size is 30
+#include <vector>
 
-namespace BEEPING
-{
-  class SpectralAnalysis;
-  class ReedSolomon;
-  //class Decoder;
+#define MAX_DECODE_STRING_SIZE 30  // max decoded string size is 30
 
-  class DecoderCustomMultiTone: public Decoder
-  {
-  public:
-    DecoderCustomMultiTone(float sr, int buffsize, int windowSize);
-    ~DecoderCustomMultiTone(void);
+namespace BEEPING {
+class SpectralAnalysis;
+class ReedSolomon;
+// class Decoder;
 
-    int *mIdxs;
+class DecoderCustomMultiTone : public Decoder {
+ public:
+  DecoderCustomMultiTone(float sr, int buffsize, int windowSize);
+  ~DecoderCustomMultiTone(void);
 
-    int *mBlockEnergyRatiosMaxToneIdx;
-    int *mBlockEnergyRatiosSecondToneIdx;
-    int *mToneRepetitions;
+  int* mIdxs;
 
-    int *idxTonesFrontDoorToken1;
-    int *idxTonesFrontDoorToken2;
+  int* mBlockEnergyRatiosMaxToneIdx;
+  int* mBlockEnergyRatiosSecondToneIdx;
+  int* mToneRepetitions;
 
-    int DecodeAudioBuffer(float *audioBuffer, int size);
-    int GetDecodedData(char *stringDecoded);
+  int* idxTonesFrontDoorToken1;
+  int* idxTonesFrontDoorToken2;
 
-    float GetDecodingBeginFreq();
-    float GetDecodingEndFreq();
+  int DecodeAudioBuffer(float* audioBuffer, int size);
+  int GetDecodedData(char* stringDecoded);
 
-    int GetSpectrum(float *spectrumBuffer);
-    
-    int AnalyzeStartTokens(float *audioBuffer);
-    int AnalyzeToken(float *audioBuffer);
+  float GetDecodingBeginFreq();
+  float GetDecodingEndFreq();
 
-    int ComputeStatsStartTokens(void);
-    int ComputeStats(void);
+  int GetSpectrum(float* spectrumBuffer);
 
-    int getSizeFilledFrameCircularBuffer();
-    int getSizeFilledBlockCircularBuffer();
-    
-    float ComputeBlockMagSpecSumsCurrentToken(int midFreqBin, int width, int nbins, std::vector<float> &sumPerFrame);
-    float ComputeBlockMagSpecSumsLastToken(int midFreqBin, int width, int nbins, std::vector<float> &sumPerFrame);
-  };
-}
+  int AnalyzeStartTokens(float* audioBuffer);
+  int AnalyzeToken(float* audioBuffer);
 
-#endif //__DECODERCUSTOMMULTITONE__
+  int ComputeStatsStartTokens(void);
+  int ComputeStats(void);
+
+  int getSizeFilledFrameCircularBuffer();
+  int getSizeFilledBlockCircularBuffer();
+
+  float ComputeBlockMagSpecSumsCurrentToken(int midFreqBin, int width,
+                                            int nbins,
+                                            std::vector<float>& sumPerFrame);
+  float ComputeBlockMagSpecSumsLastToken(int midFreqBin, int width, int nbins,
+                                         std::vector<float>& sumPerFrame);
+};
+}  // namespace BEEPING
+
+#endif  //__DECODERCUSTOMMULTITONE__

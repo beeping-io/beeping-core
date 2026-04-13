@@ -4,21 +4,20 @@
 
 #include <Encoder.h>
 
-namespace BEEPING
-{
-  class EncoderHiddenMultiTone : public Encoder
-  {
-  public:
-    EncoderHiddenMultiTone(float samplingRate, int buffsize, int windowSize);
-    ~EncoderHiddenMultiTone(void);
+namespace BEEPING {
+class EncoderHiddenMultiTone : public Encoder {
+ public:
+  EncoderHiddenMultiTone(float samplingRate, int buffsize, int windowSize);
+  ~EncoderHiddenMultiTone(void);
 
-    float* mCurrentFreqs;
-    float* mCurrentFreqsLoudness;
+  float* mCurrentFreqs;
+  float* mCurrentFreqsLoudness;
 
-    int EncodeDataToAudioBuffer(const char *stringToEncode, int type, int size, const char *melodyString, int melodySize);
-    int GetEncodedAudioBuffer(float *audioBuffer);
-    int ResetEncodedAudioBuffer();
-  };
-}
+  int EncodeDataToAudioBuffer(const char* stringToEncode, int type, int size,
+                              const char* melodyString, int melodySize);
+  int GetEncodedAudioBuffer(float* audioBuffer);
+  int ResetEncodedAudioBuffer();
+};
+}  // namespace BEEPING
 
-#endif //__ENCODERHIDDENMULTITONE__
+#endif  //__ENCODERHIDDENMULTITONE__

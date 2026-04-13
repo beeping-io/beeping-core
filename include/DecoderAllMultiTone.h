@@ -1,53 +1,54 @@
 #ifndef __DECODERALLMULTITONE__
 #define __DECODERALLMULTITONE__
 
-#include <vector>
-
 #include <Decoder.h>
 
-#define MAX_DECODE_STRING_SIZE 30 //max decoded string size is 30
+#include <vector>
 
-namespace BEEPING
-{
-  class SpectralAnalysis;
-  class ReedSolomon;
-  //class Decoder;
+#define MAX_DECODE_STRING_SIZE 30  // max decoded string size is 30
 
-  class DecoderAllMultiTone: public Decoder
-  {
-  public:
-    DecoderAllMultiTone(float sr, int buffsize, int windowSize);
-    ~DecoderAllMultiTone(void);
+namespace BEEPING {
+class SpectralAnalysis;
+class ReedSolomon;
+// class Decoder;
 
-    int *mIdxs;
+class DecoderAllMultiTone : public Decoder {
+ public:
+  DecoderAllMultiTone(float sr, int buffsize, int windowSize);
+  ~DecoderAllMultiTone(void);
 
-    int *mBlockEnergyRatiosMaxToneIdx;
-    int *mBlockEnergyRatiosSecondToneIdx;
-    int *mToneRepetitions;
+  int* mIdxs;
 
-    int *idxTonesFrontDoorToken1; //For single decoding mode
-    int *idxTonesFrontDoorToken2; //For single decoding mode
-    int **idxTonesFrontDoorToken1Array; //For multiple decoding mode
-    int **idxTonesFrontDoorToken2Array; //For multiple decoding mode
+  int* mBlockEnergyRatiosMaxToneIdx;
+  int* mBlockEnergyRatiosSecondToneIdx;
+  int* mToneRepetitions;
 
-    int DecodeAudioBuffer(float *audioBuffer, int size);
-    int GetDecodedData(char *stringDecoded);
+  int* idxTonesFrontDoorToken1;        // For single decoding mode
+  int* idxTonesFrontDoorToken2;        // For single decoding mode
+  int** idxTonesFrontDoorToken1Array;  // For multiple decoding mode
+  int** idxTonesFrontDoorToken2Array;  // For multiple decoding mode
 
-    int GetSpectrum(float *spectrumBuffer);
-    
-    int AnalyzeStartTokens(float *audioBuffer);
-    int AnalyzeToken(float *audioBuffer, int mode);
+  int DecodeAudioBuffer(float* audioBuffer, int size);
+  int GetDecodedData(char* stringDecoded);
 
-    int ComputeStatsStartTokens(int mode);
-    int ComputeStats(int mode);
+  int GetSpectrum(float* spectrumBuffer);
 
-    int getSizeFilledFrameCircularBuffer();
-    int getSizeFilledBlockCircularBuffer();
-    int getSizeFilledBlockCircularBuffer(int mode);
-    
-    float ComputeBlockMagSpecSumsCurrentToken(int midFreqBin, int width, int nbins, std::vector<float> &sumPerFrame);
-    float ComputeBlockMagSpecSumsLastToken(int midFreqBin, int width, int nbins, std::vector<float> &sumPerFrame);
-  };
-}
+  int AnalyzeStartTokens(float* audioBuffer);
+  int AnalyzeToken(float* audioBuffer, int mode);
 
-#endif //__DECODERALLMULTITONE__
+  int ComputeStatsStartTokens(int mode);
+  int ComputeStats(int mode);
+
+  int getSizeFilledFrameCircularBuffer();
+  int getSizeFilledBlockCircularBuffer();
+  int getSizeFilledBlockCircularBuffer(int mode);
+
+  float ComputeBlockMagSpecSumsCurrentToken(int midFreqBin, int width,
+                                            int nbins,
+                                            std::vector<float>& sumPerFrame);
+  float ComputeBlockMagSpecSumsLastToken(int midFreqBin, int width, int nbins,
+                                         std::vector<float>& sumPerFrame);
+};
+}  // namespace BEEPING
+
+#endif  //__DECODERALLMULTITONE__
