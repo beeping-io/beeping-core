@@ -931,25 +931,15 @@ void getFreqsFromIdxAudibleMultiTone(int idx, float samplingRate,
 
 // n is 0 or 1 for multitone mode
 void getFreqsFromIdxNonAudibleMultiTone(int idx, float samplingRate,
-                                        int windowSize, float freqOffset,
-                                        float** freqs) {
-  // float freqs[2];
-  // float* freqs = new float[2];
-
-  // int* idxtones = new int[2];
-  /* idxtone1 = idx / 2;
-  freqs[0] = getToneFromIdxNonAudibleMultiTone(idxtone1, samplingRate,
-  windowSize); idxtone2 = (idx + numTonesNonAudibleMultiTone) %
-  numTonesNonAudibleMultiTone; freqs[1] =
-  getToneFromIdxNonAudibleMultiTone(idxtone2, samplingRate, windowSize);*/
-
+                                        int windowSize, float baseFreq,
+                                        float freqOffset, float** freqs) {
   int* idxs = new int[2];
 
   getIdxsFromIdxNonAudibleMultiTone(idx, &idxs);
-  (*freqs)[0] = getToneFromIdxNonAudibleMultiTone(idxs[0], samplingRate,
-                                                  windowSize, freqOffset);
-  (*freqs)[1] = getToneFromIdxNonAudibleMultiTone(idxs[1], samplingRate,
-                                                  windowSize, freqOffset);
+  (*freqs)[0] = getToneFromIdxNonAudibleMultiTone(
+      idxs[0], samplingRate, windowSize, baseFreq, freqOffset);
+  (*freqs)[1] = getToneFromIdxNonAudibleMultiTone(
+      idxs[1], samplingRate, windowSize, baseFreq, freqOffset);
 
   delete[] idxs;
 
@@ -982,18 +972,12 @@ float getToneFromIdxAudibleMultiTone(int idx, float samplingRate,
 // This function is called by getFreqsFromIdxNonAudibleMultiTone(...)
 // idx should be < numTonesNonAudibleMultiTone
 float getToneFromIdxNonAudibleMultiTone(int idx, float samplingRate,
-                                        int windowSize, float freqOffset) {
-  float binToHz =
-      samplingRate / windowSize;  // 21,5332Hz for 1 bin at 44100Hz-2048ws
+                                        int windowSize, float baseFreq,
+                                        float freqOffset) {
+  float binToHz = samplingRate / windowSize;
 
-  // int firstFreqBin = (int)(16800.f / binToHz + .5); //first token arround
-  // 16800Hz, last token arround 21447Hz int firstFreqBin = (int)(17200.f /
-  // binToHz + .5); //first token arround 16800Hz, last token arround 21447Hz
-  // int firstFreqBin = (int)(17800.f / binToHz + .5); //first token arround
-  // 17807.9Hz, last token arround 21425Hz
-  int firstFreqBin =
-      (int)(17800.f / binToHz + .5);  // first token arround 17807.95Hz, last
-                                      // token arround 20714.94Hz
+  // baseFreq is adaptive: 17800 Hz at 44.1k+, lower at reduced rates
+  int firstFreqBin = (int)(baseFreq / binToHz + .5);
 
   float firstFreq = firstFreqBin * binToHz;
 

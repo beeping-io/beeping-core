@@ -43,10 +43,10 @@ extern float getToneFromIdxAudibleMultiTone(int idx, float samplingRate,
 extern void getIdxsFromIdxAudibleMultiTone(int idx, int** idxs);
 
 extern void getFreqsFromIdxNonAudibleMultiTone(int idx, float samplingRate,
-                                               int windowSize, float freqOffset,
-                                               float** freqs);
+                                               int windowSize, float baseFreq,
+                                               float freqOffset, float** freqs);
 extern float getToneFromIdxNonAudibleMultiTone(int idx, float samplingRate,
-                                               int windowSize,
+                                               int windowSize, float baseFreq,
                                                float freqOffset);
 extern void getIdxsFromIdxNonAudibleMultiTone(int idx, int** idxs);
 

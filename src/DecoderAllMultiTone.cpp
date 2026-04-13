@@ -99,19 +99,21 @@ DecoderAllMultiTone::DecoderAllMultiTone(const BeepingConfig& config,
       for (int i = 0; i < mNumTones; i++)
         mFreqsBinsArray[t][i] =
             (int)(Globals::getToneFromIdxNonAudibleMultiTone(
-                      i, mSampleRate, mWindowSize,
+                      i, mSampleRate, mWindowSize, m_config.inaudibleBaseFreq,
                       m_config.freqOffsetForNonAudibleMultiTone) *
                       mFreq2Bin +
                   .5);
       // Optimize size of block spectrogram (only needed bins in token space
       // range)
-      mBeginBinArray[t] = (int)(Globals::getToneFromIdxNonAudibleMultiTone(
-                                    0, mSampleRate, mWindowSize,
-                                    m_config.freqOffsetForNonAudibleMultiTone) *
-                                    mFreq2Bin +
-                                .5);
+      mBeginBinArray[t] =
+          (int)(Globals::getToneFromIdxNonAudibleMultiTone(
+                    0, mSampleRate, mWindowSize, m_config.inaudibleBaseFreq,
+                    m_config.freqOffsetForNonAudibleMultiTone) *
+                    mFreq2Bin +
+                .5);
       mEndBinArray[t] = (int)(Globals::getToneFromIdxNonAudibleMultiTone(
                                   mNumTones - 1, mSampleRate, mWindowSize,
+                                  m_config.inaudibleBaseFreq,
                                   m_config.freqOffsetForNonAudibleMultiTone) *
                                   mFreq2Bin +
                               .5);

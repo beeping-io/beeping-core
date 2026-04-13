@@ -3,7 +3,7 @@
 > Estado de compatibilidad de `beeping-core` con plataformas de audio del mundo
 > real. Se actualiza cada vez que se verifica un nuevo sample rate o plataforma.
 >
-> Ultima actualizacion: 2026-04-13
+> Ultima actualizacion: 2026-04-13 (adaptive inaudible mode)
 
 ---
 
@@ -68,10 +68,10 @@
 |---|---|---|
 | 📺 Netflix | 48000 | 🟢 |
 | 🏰 Disney+ | 48000 | 🟢 |
-| 📡 FM Radio Digital (DAB/DAB+) | 32000 | 🟡 Audible only |
-| 📻 Radio por Internet | 32000 | 🟡 Audible only |
-| 📺 Cable TV USA (audio tracks) | 24000 | 🟡 Audible only |
-| 📡 IPTV | 24000 | 🟡 Audible only |
+| 📡 FM Radio Digital (DAB/DAB+) | 32000 | 🟢 |
+| 📻 Radio por Internet | 32000 | 🟢 |
+| 📺 Cable TV USA (audio tracks) | 24000 | 🟢 |
+| 📡 IPTV | 24000 | 🟢 |
 
 ## 🎹 Produccion Musical (DAWs)
 
@@ -99,19 +99,20 @@
 | **96000** | 🟢 | 🟢 | 🟢 | Musica hi-res, DAWs |
 | **48000** | 🟢 | 🟢 | 🟢 | Moviles, video social, videollamadas, podcasts |
 | **44100** | 🟢 | 🟢 | 🟢 | CD, web audio, musica streaming |
-| **32000** | 🟢 | 🔴 | 🔴 | FM radio digital (solo modo Audible) |
-| **24000** | 🟢 | 🔴 | 🔴 | Cable TV (solo modo Audible) |
-| **22050** | 🟢 | 🔴 | 🔴 | Legacy low-quality |
+| **32000** | 🟢 | 🟢 | 🟢 | FM radio digital |
+| **24000** | 🟢 | 🟢 | 🟢 | Cable TV USA, IPTV |
+| **22050** | 🟢 | 🟢 | 🟢 | Legacy low-quality |
 | **16000** | 🔴 | 🔴 | 🔴 | Voice messaging — Nyquist 8kHz insuficiente |
 
 ### Notas
 
-- **Inaudible** usa frecuencias 17.8-21kHz. A rates <44.1kHz, Nyquist corta
-  estas frecuencias (limitacion fisica, no de software).
+- **Inaudible adaptativo**: a 44.1kHz+ usa 17.8-21kHz (totalmente inaudible).
+  A rates menores, comprime automaticamente al rango mas alto bajo Nyquist
+  (ej: 32kHz → ~14kHz, 24kHz → ~10kHz). Semi-inaudible para adultos >30.
 - **Audible** usa 3.3-10kHz. Funciona hasta 22050 Hz (Nyquist 11kHz).
-  A 16kHz (Nyquist 8kHz), las frecuencias superiores del modo se pierden.
-- **32k/24k con modo Audible**: funciona pero los tonos son audibles para
-  el usuario. Util para broadcast donde el "beep" es aceptable.
+  A 16kHz (Nyquist 8kHz), frecuencias superiores se pierden.
+- **16kHz**: unico rate no soportado. Nyquist 8kHz no da suficiente
+  espectro para ninguno de los modos.
 
 ---
 

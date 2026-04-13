@@ -33,20 +33,22 @@ DecoderNonAudibleMultiTone::DecoderNonAudibleMultiTone(
   mFreq2Bin = mSpectralAnalysis->mFftSize / mSampleRate;
   mFreqsBins = new int[mNumTones];
   for (int i = 0; i < mNumTones; i++)
-    mFreqsBins[i] = (int)(Globals::getToneFromIdxNonAudibleMultiTone(
-                              i, mSampleRate, mWindowSize,
-                              m_config.freqOffsetForNonAudibleMultiTone) *
-                              mFreq2Bin +
-                          .5);
+    mFreqsBins[i] =
+        (int)(Globals::getToneFromIdxNonAudibleMultiTone(
+                  i, mSampleRate, mWindowSize, m_config.inaudibleBaseFreq,
+                  m_config.freqOffsetForNonAudibleMultiTone) *
+                  mFreq2Bin +
+              .5);
 
   // Optimize size of block spectrogram (only needed bins in token space range)
   mBeginBin = (int)(Globals::getToneFromIdxNonAudibleMultiTone(
-                        0, mSampleRate, mWindowSize,
+                        0, mSampleRate, mWindowSize, m_config.inaudibleBaseFreq,
                         m_config.freqOffsetForNonAudibleMultiTone) *
                         mFreq2Bin +
                     .5);
   mEndBin = (int)(Globals::getToneFromIdxNonAudibleMultiTone(
                       mNumTones - 1, mSampleRate, mWindowSize,
+                      m_config.inaudibleBaseFreq,
                       m_config.freqOffsetForNonAudibleMultiTone) *
                       mFreq2Bin +
                   .5);

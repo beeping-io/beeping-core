@@ -109,7 +109,7 @@ int EncoderNonAudibleMultiTone::EncodeDataToAudioBuffer(
     int samplesForGap = (int)(mSampleRate * m_config.durToken * gapLength);
 
     Globals::getFreqsFromIdxNonAudibleMultiTone(
-        digits[i], mSampleRate, mWindowSize,
+        digits[i], mSampleRate, mWindowSize, m_config.inaudibleBaseFreq,
         m_config.freqOffsetForNonAudibleMultiTone, (float**)&mCurrentFreqs);
     Globals::getLoudnessNonAudibleMultiToneFromIdx(
         digits[i], (float**)&mCurrentFreqsLoudness);

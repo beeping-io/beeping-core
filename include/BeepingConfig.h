@@ -26,6 +26,10 @@ struct BeepingConfig {
   int nBinsOffsetForNonAudibleMultiTone = 4;
   float freqOffsetForNonAudibleMultiTone = 86.1328141638f;
 
+  // Adaptive inaudible base frequency (computed by compute_config)
+  // At 44.1k+: 17800 Hz.  At lower rates: drops to fit under Nyquist.
+  float inaudibleBaseFreq = 17800.f;
+
   // Synth parameters (used internally by encoders)
   float synthVolume = 0.f;
 
