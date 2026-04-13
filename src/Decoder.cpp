@@ -1,3 +1,4 @@
+#include <BeepingConfig.h>
 #include <Decoder.h>
 #include <Globals.h>
 #include <ReedSolomon.h>
@@ -15,8 +16,9 @@
 
 using namespace BEEPING;
 
-Decoder::Decoder(float samplingRate, int buffSize, int windowSize,
-                 int numTokens, int numTones) {
+Decoder::Decoder(const BeepingConfig& config, float samplingRate, int buffSize,
+                 int windowSize, int numTokens, int numTones)
+    : m_config(config) {
   mNumTokens = numTokens;
   mNumTones = numTones;
 
@@ -54,8 +56,6 @@ Decoder::Decoder(float samplingRate, int buffSize, int windowSize,
     mHopSize = 64;
   }
 
-  Globals::init(windowSize, mSampleRate);
-
   // fftSize = windowSize
   mSpectralAnalysis = new SpectralAnalysis(
       kEnergySpectrum, mWindowSize, mWindowSize,
@@ -91,7 +91,7 @@ Decoder::Decoder(float samplingRate, int buffSize, int windowSize,
 
   mReadPosInBlockCircularBuffer = 0;
   mWritePosInBlockCircularBuffer = 0;
-  mSizeBlockCircularBuffer = (int)((mSampleRate * Globals::durToken * 2.f /
+  mSizeBlockCircularBuffer = (int)((mSampleRate * m_config.durToken * 2.f /
                                     (float)mSpectralAnalysis->mHopSize) +
                                    0.5f);
 
@@ -241,9 +241,11 @@ int Decoder::getSizeFilledBlockCircularBuffer(int mode) {
 // Decode audioBuffer to check if begin token is found, we should keep previous
 // buffer to check if token was started in previous var mDecoding > 0 when token
 // has been found, once decoding is finished, mDecoding = 0
-int Decoder::DecodeAudioBuffer(float* audioBuffer, int size) { return -1; }
+int Decoder::DecodeAudioBuffer(float* /*audioBuffer*/, int /*size*/) {
+  return -1;
+}
 
-int Decoder::GetDecodedData(char* stringDecoded) { return -1; }
+int Decoder::GetDecodedData(char* /*stringDecoded*/) { return -1; }
 
 float Decoder::GetConfidenceError() {
   // mConfidence = mConfidenceEnergyRatios * mConfidenceCorrection;
@@ -296,9 +298,9 @@ int Decoder::GetSpectrum(float* spectrumBuffer) {
   return mSpectralAnalysis->mFftSize / 2;
 }
 
-int Decoder::AnalyzeStartTokens(float* audioBuffer) { return -1; }
+int Decoder::AnalyzeStartTokens(float* /*audioBuffer*/) { return -1; }
 
-int Decoder::AnalyzeToken(float* audioBuffer) { return -1; }
+int Decoder::AnalyzeToken(float* /*audioBuffer*/) { return -1; }
 
 int Decoder::ComputeStatsStartTokens() { return -1; }
 
@@ -307,14 +309,18 @@ int Decoder::ComputeStats() { return -1; }
 // It attenuates the magnitude of those bins in the token that have a larger and
 // stable energy in the last token. Input: is a spectogram block of the bins
 // used in the token detection (>3.3kHz)
-int Decoder::DeReverbToken(const int nbins, int* freqsBins) { return -1; }
+int Decoder::DeReverbToken(const int /*nbins*/, int* /*freqsBins*/) {
+  return -1;
+}
 
 float Decoder::ComputeBlockMagSpecSumsLastToken(
-    int midFreqBin, int width, int nbins, std::vector<float>& sumPerFrame) {
+    int /*midFreqBin*/, int /*width*/, int /*nbins*/,
+    std::vector<float>& /*sumPerFrame*/) {
   return -1;
 }
 
 float Decoder::ComputeBlockMagSpecSumsCurrentToken(
-    int midFreqBin, int width, int nbins, std::vector<float>& sumPerFrame) {
+    int /*midFreqBin*/, int /*width*/, int /*nbins*/,
+    std::vector<float>& /*sumPerFrame*/) {
   return -1;
 }

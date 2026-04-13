@@ -21,33 +21,37 @@
 
 using namespace BEEPING;
 
-DecoderHiddenMultiTone::DecoderHiddenMultiTone(float samplingRate, int buffSize,
+DecoderHiddenMultiTone::DecoderHiddenMultiTone(const BeepingConfig& config,
+                                               float samplingRate, int buffSize,
                                                int windowSize)
-    : Decoder(samplingRate, buffSize, windowSize, Globals::numTokensHidden,
-              Globals::numTonesHiddenMultiTone) {
+    : Decoder(config, samplingRate, buffSize, windowSize,
+              config.numTokensHidden, config.numTonesHiddenMultiTone) {
 #ifdef _IOS_LOG_
   ios_log("C++ DecoderHiddenMultiTone");
 #endif  //_IOS_LOG_
   mFreq2Bin = mSpectralAnalysis->mFftSize / mSampleRate;
   mFreqsBins = new int[mNumTones];
   for (int i = 0; i < mNumTones; i++)
-    mFreqsBins[i] = (int)(Globals::getToneFromIdxHiddenMultiTone(i, mSampleRate,
-                                                                 mWindowSize) *
+    mFreqsBins[i] = (int)(Globals::getToneFromIdxHiddenMultiTone(
+                              i, mSampleRate, mWindowSize,
+                              m_config.freqOffsetForHiddenMultiTone) *
                               mFreq2Bin +
                           .5);
 
   // Optimize size of block spectrogram (only needed bins in token space range)
-  mBeginBin = (int)(Globals::getToneFromIdxHiddenMultiTone(0, mSampleRate,
-                                                           mWindowSize) *
+  mBeginBin = (int)(Globals::getToneFromIdxHiddenMultiTone(
+                        0, mSampleRate, mWindowSize,
+                        m_config.freqOffsetForHiddenMultiTone) *
                         mFreq2Bin +
                     .5);
   mEndBin = (int)(Globals::getToneFromIdxHiddenMultiTone(
-                      mNumTones - 1, mSampleRate, mWindowSize) *
+                      mNumTones - 1, mSampleRate, mWindowSize,
+                      m_config.freqOffsetForHiddenMultiTone) *
                       mFreq2Bin +
                   .5);
 
-  idxFrontDoorToken1 = Globals::getIdxFromChar(Globals::frontDoorTokens[0]);
-  idxFrontDoorToken2 = Globals::getIdxFromChar(Globals::frontDoorTokens[1]);
+  idxFrontDoorToken1 = Globals::getIdxFromChar(m_config.frontDoorTokens[0]);
+  idxFrontDoorToken2 = Globals::getIdxFromChar(m_config.frontDoorTokens[1]);
 
   mIdxs = new int[2];
 
@@ -314,7 +318,7 @@ int DecoderHiddenMultiTone::AnalyzeStartTokens(
   __android_log_write(ANDROID_LOG_INFO, "BeepingCoreLibInfo",
                       text);  // Or ANDROID_LOG_INFO, ...
   //__android_log_write(ANDROID_LOG_INFO, "BeepingCoreLibInfo",
-  //pStringDecoded);//Or ANDROID_LOG_INFO, ...
+  // pStringDecoded);//Or ANDROID_LOG_INFO, ...
 #endif
 
   mWritePosInBlockCircularBuffer =
@@ -328,7 +332,7 @@ int DecoderHiddenMultiTone::AnalyzeStartTokens(
   __android_log_write(ANDROID_LOG_INFO, "BeepingCoreLibInfo",
                       text2);  // Or ANDROID_LOG_INFO, ...
   //__android_log_write(ANDROID_LOG_INFO, "BeepingCoreLibInfo",
-  //pStringDecoded);//Or ANDROID_LOG_INFO, ...
+  // pStringDecoded);//Or ANDROID_LOG_INFO, ...
 #endif
 
   while (getSizeFilledBlockCircularBuffer() >= mSizeBlockCircularBuffer - 1) {
@@ -590,9 +594,9 @@ int DecoderHiddenMultiTone::ComputeStats() {
       */
       // Increment base freq for even and not for odd
       if ((mDecoding % 3) == 1) {
-        evalToneBin += Globals::nBinsOffsetForHiddenMultiTone;
+        evalToneBin += m_config.nBinsOffsetForHiddenMultiTone;
       } else if ((mDecoding % 3) == 2) {
-        evalToneBin += Globals::nBinsOffsetForHiddenMultiTone * 2;
+        evalToneBin += m_config.nBinsOffsetForHiddenMultiTone * 2;
       }
 
       for (int n = 0; n < mSizeTokenBinAnal; n++) {

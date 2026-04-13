@@ -21,9 +21,10 @@
 
 using namespace BEEPING;
 
-DecoderAudible::DecoderAudible(float samplingRate, int buffSize, int windowSize)
-    : Decoder(samplingRate, buffSize, windowSize, Globals::numTokensAudible,
-              Globals::numTokensAudible) {
+DecoderAudible::DecoderAudible(const BeepingConfig& config, float samplingRate,
+                               int buffSize, int windowSize)
+    : Decoder(config, samplingRate, buffSize, windowSize,
+              config.numTokensAudible, config.numTokensAudible) {
 #ifdef _IOS_LOG_
   ios_log("C++ DecoderAudible");
 #endif  //_IOS_LOG_
@@ -45,8 +46,8 @@ DecoderAudible::DecoderAudible(float samplingRate, int buffSize, int windowSize)
                       mFreq2Bin +
                   .5);
 
-  idxFrontDoorToken1 = Globals::getIdxFromChar(Globals::frontDoorTokens[0]);
-  idxFrontDoorToken2 = Globals::getIdxFromChar(Globals::frontDoorTokens[1]);
+  idxFrontDoorToken1 = Globals::getIdxFromChar(m_config.frontDoorTokens[0]);
+  idxFrontDoorToken2 = Globals::getIdxFromChar(m_config.frontDoorTokens[1]);
 
   mDecodingMode =
       Globals::/*DECODING_MODE::*/ DECODING_MODE_AUDIBLE;  // 0=AUDIBLE,
@@ -238,7 +239,7 @@ int DecoderAudible::AnalyzeStartTokens(
   __android_log_write(ANDROID_LOG_INFO, "BeepingCoreLibInfo",
                       text);  // Or ANDROID_LOG_INFO, ...
   //__android_log_write(ANDROID_LOG_INFO, "BeepingCoreLibInfo",
-  //pStringDecoded);//Or ANDROID_LOG_INFO, ...
+  // pStringDecoded);//Or ANDROID_LOG_INFO, ...
 #endif
 
   mWritePosInBlockCircularBuffer =
@@ -252,7 +253,7 @@ int DecoderAudible::AnalyzeStartTokens(
   __android_log_write(ANDROID_LOG_INFO, "BeepingCoreLibInfo",
                       text2);  // Or ANDROID_LOG_INFO, ...
   //__android_log_write(ANDROID_LOG_INFO, "BeepingCoreLibInfo",
-  //pStringDecoded);//Or ANDROID_LOG_INFO, ...
+  // pStringDecoded);//Or ANDROID_LOG_INFO, ...
 #endif
 
   while (getSizeFilledBlockCircularBuffer() >= mSizeBlockCircularBuffer - 1) {
@@ -438,8 +439,8 @@ int DecoderAudible::ComputeStats() {
 
   // New implementation using Spectrogram
   for (int t = 0; t < (mSizeBlockCircularBuffer / 2); t++) {
-    int idx = mBlockEnergyRatiosTokenIdx[(mReadPosInBlockCircularBuffer + t) %
-                                         mSizeBlockCircularBuffer];
+    (void)mBlockEnergyRatiosTokenIdx[(mReadPosInBlockCircularBuffer + t) %
+                                     mSizeBlockCircularBuffer];
 
     for (int i = mBeginBin; i <= mEndBin; i++) {
       energyBlock += mBlockSpecMag[(mReadPosInBlockCircularBuffer + t) %
@@ -520,7 +521,7 @@ int DecoderAudible::ComputeStats() {
       // mEnergyRatios[i] = mEnergyDiff[i]; //trying...
     }
 
-    float maxEnergyRatios = Globals::maxValue(mEnergyRatios, mNumTokens);
+    (void)Globals::maxValue(mEnergyRatios, mNumTokens);
     // float maxEnergyStd = Globals::maxValue(mEnergyStd,mNumFreqs); //not being
     // used (but don't delete) float maxEnergyDiff =
     // Globals::maxValue(mEnergyDiff,mNumFreqs); //not being used (but don't
@@ -561,9 +562,9 @@ int DecoderAudible::DeReverbToken(const int nbins, int* freqsBins) {
 
   // de-reverb
   //  float freq2bin = float(fftsize)/fs;
-  int i = 0, j = 0;
+  int j = 0;
   //  std::vector<int> freqsBins;
-  //  for (i=0; i<freqs.size();++i)
+  //  for (int i=0; i<freqs.size();++i)
   //  {
   //    freqsBins.push_back(round(freqs[i] * freq2bin)); //
   //  }

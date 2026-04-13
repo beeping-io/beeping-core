@@ -7,7 +7,8 @@
 namespace BEEPING {
 class EncoderHiddenMultiTone : public Encoder {
  public:
-  EncoderHiddenMultiTone(float samplingRate, int buffsize, int windowSize);
+  EncoderHiddenMultiTone(const BeepingConfig& config, float samplingRate,
+                         int buffsize, int windowSize);
   ~EncoderHiddenMultiTone(void);
 
   float* mCurrentFreqs;

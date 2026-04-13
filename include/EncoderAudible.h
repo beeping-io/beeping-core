@@ -6,7 +6,8 @@
 namespace BEEPING {
 class EncoderAudible : public Encoder {
  public:
-  EncoderAudible(float samplingRate, int buffsize, int windowSize);
+  EncoderAudible(const BeepingConfig& config, float samplingRate, int buffsize,
+                 int windowSize);
   ~EncoderAudible(void);
 
   int EncodeDataToAudioBuffer(const char* stringToEncode, int type, int size,

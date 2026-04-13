@@ -400,7 +400,7 @@ void ReedSolomon::GetCode(std::vector<int>& code) {
 
 // decoding received code
 void ReedSolomon::SetCode(const std::vector<int> code) {
-  if ((code.size() < kk) && (msg_len < kk)) {
+  if ((static_cast<int>(code.size()) < kk) && (msg_len < kk)) {
     // copy received error code digits (8)
     for (int i = 0; i < (nn - kk); ++i) recd[i] = code[msg_len + i];
 

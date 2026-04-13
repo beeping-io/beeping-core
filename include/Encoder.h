@@ -1,14 +1,16 @@
 #ifndef __ENCODER__
 #define __ENCODER__
 
+#include <BeepingConfig.h>
+
 namespace BEEPING {
 class ReedSolomon;
 
 class Encoder {
  public:
-  Encoder(float samplingRate, int buffsize, int windowSize, int numTokens,
-          int numTones);
-  ~Encoder(void);
+  Encoder(const BeepingConfig& config, float samplingRate, int buffsize,
+          int windowSize, int numTokens, int numTones);
+  virtual ~Encoder(void);
 
   int SetAudioSignature(int samplesSize, const float* samplesBuffer);
 
@@ -25,6 +27,8 @@ class Encoder {
   float* mAudioSignature;
 
   float* mAudioBufferEncodedString;
+
+  BeepingConfig m_config;
 
   int mNumTokens;
   int mNumTones;

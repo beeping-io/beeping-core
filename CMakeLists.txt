@@ -22,6 +22,7 @@ include(Sanitizers)
 # --- Library sources ---
 
 set(BEEPING_CORE_SOURCES
+  src/BeepingConfig.cpp
   src/BeepingCoreLib_api.cpp
   src/Encoder.cpp
   src/Decoder.cpp
@@ -101,4 +102,16 @@ if(BUILD_TESTING)
     beeping_enable_tsan(ThreadSafetyStressTest)
   endif()
   add_test(NAME ThreadSafetyStressTest COMMAND ThreadSafetyStressTest)
+
+  add_executable(ConcurrentInstancesTest
+    tests/ConcurrentInstancesTest.cpp
+  )
+  target_link_libraries(ConcurrentInstancesTest PRIVATE BeepingCore)
+  if(NOT WIN32)
+    target_link_libraries(ConcurrentInstancesTest PRIVATE pthread)
+  endif()
+  if(BEEPING_ENABLE_TSAN)
+    beeping_enable_tsan(ConcurrentInstancesTest)
+  endif()
+  add_test(NAME ConcurrentInstancesTest COMMAND ConcurrentInstancesTest)
 endif()

@@ -13,8 +13,6 @@ jobs:
   thread-sanitizer:
     name: ThreadSanitizer (Ubuntu)
     runs-on: ubuntu-latest
-    continue-on-error: true
-
     steps:
       - uses: actions/checkout@v4
 
@@ -50,6 +48,7 @@ jobs:
         run: |
           set +e
           ./build/TSan/ThreadSafetyStressTest 2>&1 | tee tsan-report.log
+          ./build/TSan/ConcurrentInstancesTest 2>&1 | tee -a tsan-report.log
           echo "exit_code=$?" >> "$GITHUB_OUTPUT"
           exit 0
 

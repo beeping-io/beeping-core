@@ -21,10 +21,11 @@
 
 using namespace BEEPING;
 
-DecoderAudibleMultiTone::DecoderAudibleMultiTone(float samplingRate,
+DecoderAudibleMultiTone::DecoderAudibleMultiTone(const BeepingConfig& config,
+                                                 float samplingRate,
                                                  int buffSize, int windowSize)
-    : Decoder(samplingRate, buffSize, windowSize, Globals::numTokensAudible,
-              Globals::numTonesAudibleMultiTone) {
+    : Decoder(config, samplingRate, buffSize, windowSize,
+              config.numTokensAudible, config.numTonesAudibleMultiTone) {
 #ifdef _IOS_LOG_
   ios_log("C++ DecoderAudibleMultiTone");
 #endif  //_IOS_LOG_
@@ -46,8 +47,8 @@ DecoderAudibleMultiTone::DecoderAudibleMultiTone(float samplingRate,
                       mFreq2Bin +
                   .5);
 
-  idxFrontDoorToken1 = Globals::getIdxFromChar(Globals::frontDoorTokens[0]);
-  idxFrontDoorToken2 = Globals::getIdxFromChar(Globals::frontDoorTokens[1]);
+  idxFrontDoorToken1 = Globals::getIdxFromChar(m_config.frontDoorTokens[0]);
+  idxFrontDoorToken2 = Globals::getIdxFromChar(m_config.frontDoorTokens[1]);
 
   mIdxs = new int[2];
 
@@ -314,7 +315,7 @@ int DecoderAudibleMultiTone::AnalyzeStartTokens(
   __android_log_write(ANDROID_LOG_INFO, "BeepingCoreLibInfo",
                       text);  // Or ANDROID_LOG_INFO, ...
   //__android_log_write(ANDROID_LOG_INFO, "BeepingCoreLibInfo",
-  //pStringDecoded);//Or ANDROID_LOG_INFO, ...
+  // pStringDecoded);//Or ANDROID_LOG_INFO, ...
 #endif
 
   mWritePosInBlockCircularBuffer =
@@ -328,7 +329,7 @@ int DecoderAudibleMultiTone::AnalyzeStartTokens(
   __android_log_write(ANDROID_LOG_INFO, "BeepingCoreLibInfo",
                       text2);  // Or ANDROID_LOG_INFO, ...
   //__android_log_write(ANDROID_LOG_INFO, "BeepingCoreLibInfo",
-  //pStringDecoded);//Or ANDROID_LOG_INFO, ...
+  // pStringDecoded);//Or ANDROID_LOG_INFO, ...
 #endif
 
   while (getSizeFilledBlockCircularBuffer() >= mSizeBlockCircularBuffer - 1) {
@@ -591,9 +592,9 @@ int DecoderAudibleMultiTone::ComputeStats() {
       */
       // Increment base freq for even and not for odd
       if ((mDecoding % 3) == 1) {
-        evalToneBin += Globals::nBinsOffsetForAudibleMultiTone;
+        evalToneBin += m_config.nBinsOffsetForAudibleMultiTone;
       } else if ((mDecoding % 3) == 2) {
-        evalToneBin += Globals::nBinsOffsetForAudibleMultiTone * 2;
+        evalToneBin += m_config.nBinsOffsetForAudibleMultiTone * 2;
       }
 
       for (int n = 0; n < mSizeTokenBinAnal; n++) {

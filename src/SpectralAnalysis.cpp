@@ -1,8 +1,9 @@
-#include <Globals.h>
 #include <SpectralAnalysis.h>
 
 #include <cmath>
 #include <cstring>  // for memset
+
+static constexpr float two_pi = 2.f * 3.14159265358979323846f;
 
 using namespace BEEPING;
 
@@ -121,7 +122,7 @@ inline void SpectralAnalysis::generateBlackmanHarris92Window(float* window,
   float fSum = 0;
   /* for -92dB */
   float a0 = .35875f, a1 = .48829f, a2 = .14128f, a3 = .01168f;
-  float fConst = float(Globals::two_pi) / (size - 1);
+  float fConst = two_pi / (size - 1);
 
   /* compute window */
   for (i = 0; i < size; i++) {
@@ -142,10 +143,9 @@ inline void SpectralAnalysis::generateBlackmanHarris74Window(float* window,
   int i;
   float fSum = 0;
   for (i = 0; i < size; i++)
-    fSum += window[i] =
-        0.47f - 0.45f * std::cos(float(Globals::two_pi) / (size - 1.0f) * i) -
-        0.01f * std::cos(float(Globals::two_pi) / (size - 1.0f) * i * 2.0f) -
-        0.01f * std::cos(float(Globals::two_pi) / (size - 1.0f) * i * 3.0f);
+    fSum += window[i] = 0.47f - 0.45f * std::cos(two_pi / (size - 1.0f) * i) -
+                        0.01f * std::cos(two_pi / (size - 1.0f) * i * 2.0f) -
+                        0.01f * std::cos(two_pi / (size - 1.0f) * i * 3.0f);
   fSum = fSum / 2;
   for (i = 0; i < size; i++) window[i] = window[i] / fSum;
   return;
@@ -159,11 +159,11 @@ inline void SpectralAnalysis::generateBlackmanHarrisWindow(float* window,
   const float a2 = 0.14128f;
   const float a3 = 0.01168f;
 
-  unsigned int idx = 0;
+  int idx = 0;
   while (idx < size) {
-    window[idx] = a0 - (a1 * cosf((Globals::two_pi * idx) / (size - 1))) +
-                  (a2 * cosf((2.0f * Globals::two_pi * idx) / (size - 1))) -
-                  (a3 * cosf((3.0f * Globals::two_pi * idx) / (size - 1)));
+    window[idx] = a0 - (a1 * cosf((two_pi * idx) / (size - 1))) +
+                  (a2 * cosf((2.0f * two_pi * idx) / (size - 1))) -
+                  (a3 * cosf((3.0f * two_pi * idx) / (size - 1)));
     idx++;
   }
   return;

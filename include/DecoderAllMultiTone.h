@@ -14,7 +14,12 @@ class ReedSolomon;
 
 class DecoderAllMultiTone : public Decoder {
  public:
-  DecoderAllMultiTone(float sr, int buffsize, int windowSize);
+  DecoderAllMultiTone(const BeepingConfig& config, float sr, int buffsize,
+                      int windowSize);
+
+  using Decoder::AnalyzeToken;
+  using Decoder::ComputeStats;
+  using Decoder::ComputeStatsStartTokens;
   ~DecoderAllMultiTone(void);
 
   int* mIdxs;

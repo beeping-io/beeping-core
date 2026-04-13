@@ -12,11 +12,12 @@
 
 using namespace BEEPING;
 
-EncoderAudible::EncoderAudible(float samplingRate, int buffsize, int windowSize)
-    : Encoder(samplingRate, buffsize, windowSize, Globals::numTokensAudible,
-              Globals::numTokensAudible) {
+EncoderAudible::EncoderAudible(const BeepingConfig& config, float samplingRate,
+                               int buffsize, int windowSize)
+    : Encoder(config, samplingRate, buffsize, windowSize,
+              config.numTokensAudible, config.numTokensAudible) {
   //__android_log_print(ANDROID_LOG_INFO, "BeepingCoreLibInfo", "EncoderAudible
-  //init" );
+  // init" );
 }
 
 EncoderAudible::~EncoderAudible(void) {}
@@ -38,9 +39,9 @@ int EncoderAudible::EncodeDataToAudioBuffer(const char* stringToEncode,
 
   // Add front-door symbols (start tokens)
   digits.push_back(Globals::getIdxFromChar(
-      Globals::frontDoorTokens[0]));  // front-door symbols
+      m_config.frontDoorTokens[0]));  // front-door symbols
   digits.push_back(Globals::getIdxFromChar(
-      Globals::frontDoorTokens[1]));  // front-door symbols
+      m_config.frontDoorTokens[1]));  // front-door symbols
 
   // Add user symbols
   for (int i = 0; i < size; i++) {
@@ -65,26 +66,27 @@ int EncoderAudible::EncodeDataToAudioBuffer(const char* stringToEncode,
   // get RS code to transmit
   mReedSolomon->GetCode(digits);
 
-  for (int i = 0; i < digits.size(); i++) {
+  for (int i = 0; i < static_cast<int>(digits.size()); i++) {
     //__android_log_print(ANDROID_LOG_INFO, "BeepingCoreLibInfo", "Digit %d",
-    //i);
+    // i);
     float tailLength = 0.5f;
     float gapLength = 0.1f;  // gap between tokens
-    int samplesPerDigit = (int)(mSampleRate * Globals::durToken);
+    int samplesPerDigit = (int)(mSampleRate * m_config.durToken);
     int samplesForFadeBegin =
-        (int)(mSampleRate * Globals::durToken * Globals::durFade);
-    int samplesForFadeEnd = (int)(mSampleRate * Globals::durToken * tailLength);
-    int samplesForGap = (int)(mSampleRate * Globals::durToken * gapLength);
+        (int)(mSampleRate * m_config.durToken * m_config.durFade);
+    int samplesForFadeEnd = (int)(mSampleRate * m_config.durToken * tailLength);
+    int samplesForGap = (int)(mSampleRate * m_config.durToken * gapLength);
     float currentFreq =
         Globals::getFreqFromIdxAudible(digits[i], mSampleRate, mWindowSize);
-    float currentFreqLoudness = Globals::getLoudnessFromIdx(digits[i]);
+    float currentFreqLoudness =
+        Globals::getLoudnessFromIdx(digits[i], m_config.numTokensAudible);
 
     for (int t = 0; t < samplesPerDigit; t++) {
-      float factor = Globals::tokenAmplitude;
+      float factor = m_config.tokenAmplitude;
 
       // if (i==0) samplesForFadeEnd = samplesForFadeBegin; //for first token
       if (i == 0) {
-        samplesForFadeEnd = (int)(mSampleRate * Globals::durToken *
+        samplesForFadeEnd = (int)(mSampleRate * m_config.durToken *
                                   (tailLength * 0.5f));  // for first token
         samplesForGap = 0;
       }
@@ -103,7 +105,7 @@ int EncoderAudible::EncodeDataToAudioBuffer(const char* stringToEncode,
 
       mAudioBufferEncodedString[t + i * samplesPerDigit] =
           currentFreqLoudness * factor *
-          sinf((2.f * Globals::pi * currentFreq) *
+          sinf((2.f * BeepingConfig::pi * currentFreq) *
                ((float)t / (float)mSampleRate));
     }
     mNumSamplesEncodedString += samplesPerDigit;
@@ -117,10 +119,10 @@ int EncoderAudible::EncodeDataToAudioBuffer(const char* stringToEncode,
   {
     // Initialize random seed:
     srand(time(NULL));
-    for (int i = 0; i < digits.size(); i++) {
-      int samplesPerDigit = (int)(mSampleRate * Globals::durToken);
+    for (int i = 0; i < static_cast<int>(digits.size()); i++) {
+      int samplesPerDigit = (int)(mSampleRate * m_config.durToken);
       int samplesForFade =
-          (int)(mSampleRate * Globals::durToken * Globals::durFade);
+          (int)(mSampleRate * m_config.durToken * m_config.durFade);
 
       // Generate a random number:
       int randNumber = rand() % mNumTokens;
@@ -131,7 +133,7 @@ int EncoderAudible::EncodeDataToAudioBuffer(const char* stringToEncode,
       float f_end = currentFreq + randOffset;
 
       for (int t = 0; t < samplesPerDigit; t++) {
-        float factor = Globals::tokenAmplitude;
+        float factor = m_config.tokenAmplitude;
 
         if (t < samplesForFade)
           factor = factor * (float)t / (float)samplesForFade;
@@ -150,12 +152,12 @@ int EncoderAudible::EncodeDataToAudioBuffer(const char* stringToEncode,
         // mAudioBufferEncodedString[t+i*samplesPerDigit]) +
         //                                                  (0.25f * factor *
         //                                                  sin(pos * 2.f *
-        //                                                  Globals::pi));
+        //                                                  BeepingConfig::pi));
 
-        float vol = pow(10.f, Globals::synthVolume / 20.f);
+        float vol = pow(10.f, m_config.synthVolume / 20.f);
         mAudioBufferEncodedString[t + i * samplesPerDigit] =
             (1.f * mAudioBufferEncodedString[t + i * samplesPerDigit]) +
-            (vol * factor * sin(pos * 2.f * Globals::pi));
+            (vol * factor * sin(pos * 2.f * BeepingConfig::pi));
       }
     }
   } else if (type == 2)  // Add melody to mAudioBufferEncodedString of size
@@ -169,15 +171,15 @@ int EncoderAudible::EncodeDataToAudioBuffer(const char* stringToEncode,
     }
 
     int numSamplesMelodyString = 0;
-    for (int i = 0; i < melodyDigits.size(); i++) {
-      int samplesPerDigit = (int)(mSampleRate * Globals::durToken);
+    for (int i = 0; i < static_cast<int>(melodyDigits.size()); i++) {
+      int samplesPerDigit = (int)(mSampleRate * m_config.durToken);
       int samplesForFade =
-          (int)(mSampleRate * Globals::durToken * Globals::durFade);
+          (int)(mSampleRate * m_config.durToken * m_config.durFade);
 
       float currentFreq = Globals::getMusicalNoteFromIdx(melodyDigits[i]);
 
       for (int t = 0; t < samplesPerDigit; t++) {
-        float factor = Globals::tokenAmplitude;
+        float factor = m_config.tokenAmplitude;
 
         if (t < samplesForFade)
           factor = factor * (float)t / (float)samplesForFade;
@@ -188,7 +190,7 @@ int EncoderAudible::EncodeDataToAudioBuffer(const char* stringToEncode,
         mAudioBufferEncodedString[t + i * samplesPerDigit] =
             (0.75f * mAudioBufferEncodedString[t + i * samplesPerDigit]) +
             (0.25f * factor *
-             sinf((2.f * Globals::pi * currentFreq) *
+             sinf((2.f * BeepingConfig::pi * currentFreq) *
                   ((float)t / (float)mSampleRate)));
       }
       numSamplesMelodyString += samplesPerDigit;

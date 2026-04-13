@@ -15,8 +15,9 @@
 
 using namespace BEEPING;
 
-Encoder::Encoder(float samplingRate, int buffsize, int windowSize,
-                 int numTokens, int numTones) {
+Encoder::Encoder(const BeepingConfig& config, float samplingRate, int buffsize,
+                 int windowSize, int numTokens, int numTones)
+    : m_config(config) {
   mnAudioSignatureSamples = 0;
   mAudioSignature = NULL;
 
@@ -36,8 +37,6 @@ Encoder::Encoder(float samplingRate, int buffsize, int windowSize,
   mSampleRate = samplingRate;
   mBufferSize = buffsize;
   mWindowSize = windowSize;
-
-  Globals::init(windowSize, mSampleRate);
 
   mReedSolomon = new ReedSolomon();
 }
@@ -69,7 +68,7 @@ int Encoder::SetAudioSignature(int samplesSize, const float* samplesBuffer) {
   if (samplesSize > 0) {
     mnAudioSignatureSamples = std::min(
         samplesSize,
-        (int)(Globals::numTotalTokens * (Globals::durToken * mSampleRate)));
+        (int)(Globals::numTotalTokens * (m_config.durToken * mSampleRate)));
     mAudioSignature = new float[mnAudioSignatureSamples];
     memcpy(mAudioSignature, samplesBuffer,
            mnAudioSignatureSamples * sizeof(float));
@@ -79,9 +78,10 @@ int Encoder::SetAudioSignature(int samplesSize, const float* samplesBuffer) {
 }
 
 // This function is implemented in the derivate classes
-int Encoder::EncodeDataToAudioBuffer(const char* stringToEncode, int type,
-                                     int size, const char* melodyString,
-                                     int melodySize) {
+int Encoder::EncodeDataToAudioBuffer(const char* /*stringToEncode*/,
+                                     int /*type*/, int /*size*/,
+                                     const char* /*melodyString*/,
+                                     int /*melodySize*/) {
   return 0;
 }
 /*

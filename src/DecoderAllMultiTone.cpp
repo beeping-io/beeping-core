@@ -23,16 +23,17 @@
 
 using namespace BEEPING;
 
-DecoderAllMultiTone::DecoderAllMultiTone(float samplingRate, int buffSize,
+DecoderAllMultiTone::DecoderAllMultiTone(const BeepingConfig& config,
+                                         float samplingRate, int buffSize,
                                          int windowSize)
-    : Decoder(samplingRate, buffSize, windowSize, Globals::numTokensAll,
-              Globals::numTonesAll) {
+    : Decoder(config, samplingRate, buffSize, windowSize, config.numTokensAll,
+              config.numTonesAll) {
 #ifdef _IOS_LOG_
   ios_log("C++ DecoderAllMultiTone");
 #endif  //_IOS_LOG_
 
-  idxFrontDoorToken1 = Globals::getIdxFromChar(Globals::frontDoorTokens[0]);
-  idxFrontDoorToken2 = Globals::getIdxFromChar(Globals::frontDoorTokens[1]);
+  idxFrontDoorToken1 = Globals::getIdxFromChar(m_config.frontDoorTokens[0]);
+  idxFrontDoorToken2 = Globals::getIdxFromChar(m_config.frontDoorTokens[1]);
 
   mIdxs = new int[2];
 
@@ -96,18 +97,21 @@ DecoderAllMultiTone::DecoderAllMultiTone(float samplingRate, int buffSize,
     if (t == Globals::/*DECODING_MODE::*/ DECODING_MODE_NONAUDIBLE) {
       for (int i = 0; i < mNumTones; i++)
         mFreqsBinsArray[t][i] =
-            (int)(Globals::getToneFromIdxNonAudibleMultiTone(i, mSampleRate,
-                                                             mWindowSize) *
+            (int)(Globals::getToneFromIdxNonAudibleMultiTone(
+                      i, mSampleRate, mWindowSize,
+                      m_config.freqOffsetForNonAudibleMultiTone) *
                       mFreq2Bin +
                   .5);
       // Optimize size of block spectrogram (only needed bins in token space
       // range)
       mBeginBinArray[t] = (int)(Globals::getToneFromIdxNonAudibleMultiTone(
-                                    0, mSampleRate, mWindowSize) *
+                                    0, mSampleRate, mWindowSize,
+                                    m_config.freqOffsetForNonAudibleMultiTone) *
                                     mFreq2Bin +
                                 .5);
       mEndBinArray[t] = (int)(Globals::getToneFromIdxNonAudibleMultiTone(
-                                  mNumTones - 1, mSampleRate, mWindowSize) *
+                                  mNumTones - 1, mSampleRate, mWindowSize,
+                                  m_config.freqOffsetForNonAudibleMultiTone) *
                                   mFreq2Bin +
                               .5);
 
@@ -138,18 +142,22 @@ DecoderAllMultiTone::DecoderAllMultiTone(float samplingRate, int buffSize,
           idxFrontDoorToken2, &(idxTonesFrontDoorToken2Array[t]));
     } else if (t == Globals::/*DECODING_MODE::*/ DECODING_MODE_HIDDEN) {
       for (int i = 0; i < mNumTones; i++)
-        mFreqsBinsArray[t][i] = (int)(Globals::getToneFromIdxHiddenMultiTone(
-                                          i, mSampleRate, mWindowSize) *
-                                          mFreq2Bin +
-                                      .5);
+        mFreqsBinsArray[t][i] =
+            (int)(Globals::getToneFromIdxHiddenMultiTone(
+                      i, mSampleRate, mWindowSize,
+                      m_config.freqOffsetForHiddenMultiTone) *
+                      mFreq2Bin +
+                  .5);
       // Optimize size of block spectrogram (only needed bins in token space
       // range)
       mBeginBinArray[t] = (int)(Globals::getToneFromIdxHiddenMultiTone(
-                                    0, mSampleRate, mWindowSize) *
+                                    0, mSampleRate, mWindowSize,
+                                    m_config.freqOffsetForHiddenMultiTone) *
                                     mFreq2Bin +
                                 .5);
       mEndBinArray[t] = (int)(Globals::getToneFromIdxHiddenMultiTone(
-                                  mNumTones - 1, mSampleRate, mWindowSize) *
+                                  mNumTones - 1, mSampleRate, mWindowSize,
+                                  m_config.freqOffsetForHiddenMultiTone) *
                                   mFreq2Bin +
                               .5);
 
@@ -461,7 +469,7 @@ int DecoderAllMultiTone::AnalyzeStartTokens(
     __android_log_write(ANDROID_LOG_INFO, "BeepingCoreLibInfo",
                         text);  // Or ANDROID_LOG_INFO, ...
     //__android_log_write(ANDROID_LOG_INFO, "BeepingCoreLibInfo",
-    //pStringDecoded);//Or ANDROID_LOG_INFO, ...
+    // pStringDecoded);//Or ANDROID_LOG_INFO, ...
 #endif
 
     if (t == 0)  // only the for the first mode
@@ -476,7 +484,7 @@ int DecoderAllMultiTone::AnalyzeStartTokens(
     __android_log_write(ANDROID_LOG_INFO, "BeepingCoreLibInfo",
                         text2);  // Or ANDROID_LOG_INFO, ...
     //__android_log_write(ANDROID_LOG_INFO, "BeepingCoreLibInfo",
-    //pStringDecoded);//Or ANDROID_LOG_INFO, ...
+    // pStringDecoded);//Or ANDROID_LOG_INFO, ...
 #endif
 
     while (getSizeFilledBlockCircularBuffer(t) >=
@@ -580,7 +588,7 @@ int DecoderAllMultiTone::AnalyzeToken(float* audioBuffer, int mode) {
       mToneRepetitions[idx]++;
 
       // Statistics
-      int _idx;
+      int _idx = -1;
       if (mode == Globals::/*DECODING_MODE::*/ DECODING_MODE_NONAUDIBLE)
         _idx = Globals::getIdxTokenFromIdxsTonesNonAudibleMultiTone(
             mBlockTokenStatisticsArray[mode][s].idxToneMax,
@@ -772,18 +780,18 @@ int DecoderAllMultiTone::ComputeStats(int mode) {
       // Increment base freq for even and not for odd
       if ((mDecoding % 3) == 1) {
         if (mode == Globals::/*DECODING_MODE::*/ DECODING_MODE_NONAUDIBLE)
-          evalToneBin += Globals::nBinsOffsetForNonAudibleMultiTone;
+          evalToneBin += m_config.nBinsOffsetForNonAudibleMultiTone;
         else if (mode == Globals::/*DECODING_MODE::*/ DECODING_MODE_AUDIBLE)
-          evalToneBin += Globals::nBinsOffsetForAudibleMultiTone;
+          evalToneBin += m_config.nBinsOffsetForAudibleMultiTone;
         else if (mode == Globals::/*DECODING_MODE::*/ DECODING_MODE_HIDDEN)
-          evalToneBin += Globals::nBinsOffsetForHiddenMultiTone;
+          evalToneBin += m_config.nBinsOffsetForHiddenMultiTone;
       } else if ((mDecoding % 3) == 2) {
         if (mode == Globals::/*DECODING_MODE::*/ DECODING_MODE_NONAUDIBLE)
-          evalToneBin += Globals::nBinsOffsetForNonAudibleMultiTone * 2;
+          evalToneBin += m_config.nBinsOffsetForNonAudibleMultiTone * 2;
         else if (mode == Globals::/*DECODING_MODE::*/ DECODING_MODE_AUDIBLE)
-          evalToneBin += Globals::nBinsOffsetForAudibleMultiTone * 2;
+          evalToneBin += m_config.nBinsOffsetForAudibleMultiTone * 2;
         else if (mode == Globals::/*DECODING_MODE::*/ DECODING_MODE_HIDDEN)
-          evalToneBin += Globals::nBinsOffsetForHiddenMultiTone * 2;
+          evalToneBin += m_config.nBinsOffsetForHiddenMultiTone * 2;
       }
 
       for (int n = 0; n < mSizeTokenBinAnal; n++) {

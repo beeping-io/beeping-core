@@ -21,11 +21,11 @@
 
 using namespace BEEPING;
 
-DecoderNonAudibleMultiTone::DecoderNonAudibleMultiTone(float samplingRate,
-                                                       int buffSize,
-                                                       int windowSize)
-    : Decoder(samplingRate, buffSize, windowSize, Globals::numTokensNonAudible,
-              Globals::numTonesNonAudibleMultiTone) {
+DecoderNonAudibleMultiTone::DecoderNonAudibleMultiTone(
+    const BeepingConfig& config, float samplingRate, int buffSize,
+    int windowSize)
+    : Decoder(config, samplingRate, buffSize, windowSize,
+              config.numTokensNonAudible, config.numTonesNonAudibleMultiTone) {
 #ifdef _IOS_LOG_
   ios_log("C++ DecoderNonAudibleMultiTone");
 #endif  //_IOS_LOG_
@@ -33,22 +33,25 @@ DecoderNonAudibleMultiTone::DecoderNonAudibleMultiTone(float samplingRate,
   mFreqsBins = new int[mNumTones];
   for (int i = 0; i < mNumTones; i++)
     mFreqsBins[i] = (int)(Globals::getToneFromIdxNonAudibleMultiTone(
-                              i, mSampleRate, mWindowSize) *
+                              i, mSampleRate, mWindowSize,
+                              m_config.freqOffsetForNonAudibleMultiTone) *
                               mFreq2Bin +
                           .5);
 
   // Optimize size of block spectrogram (only needed bins in token space range)
-  mBeginBin = (int)(Globals::getToneFromIdxNonAudibleMultiTone(0, mSampleRate,
-                                                               mWindowSize) *
+  mBeginBin = (int)(Globals::getToneFromIdxNonAudibleMultiTone(
+                        0, mSampleRate, mWindowSize,
+                        m_config.freqOffsetForNonAudibleMultiTone) *
                         mFreq2Bin +
                     .5);
   mEndBin = (int)(Globals::getToneFromIdxNonAudibleMultiTone(
-                      mNumTones - 1, mSampleRate, mWindowSize) *
+                      mNumTones - 1, mSampleRate, mWindowSize,
+                      m_config.freqOffsetForNonAudibleMultiTone) *
                       mFreq2Bin +
                   .5);
 
-  idxFrontDoorToken1 = Globals::getIdxFromChar(Globals::frontDoorTokens[0]);
-  idxFrontDoorToken2 = Globals::getIdxFromChar(Globals::frontDoorTokens[1]);
+  idxFrontDoorToken1 = Globals::getIdxFromChar(m_config.frontDoorTokens[0]);
+  idxFrontDoorToken2 = Globals::getIdxFromChar(m_config.frontDoorTokens[1]);
 
   mIdxs = new int[2];
 
@@ -315,7 +318,7 @@ int DecoderNonAudibleMultiTone::AnalyzeStartTokens(
   __android_log_write(ANDROID_LOG_INFO, "BeepingCoreLibInfo",
                       text);  // Or ANDROID_LOG_INFO, ...
   //__android_log_write(ANDROID_LOG_INFO, "BeepingCoreLibInfo",
-  //pStringDecoded);//Or ANDROID_LOG_INFO, ...
+  // pStringDecoded);//Or ANDROID_LOG_INFO, ...
 #endif
 
   mWritePosInBlockCircularBuffer =
@@ -329,7 +332,7 @@ int DecoderNonAudibleMultiTone::AnalyzeStartTokens(
   __android_log_write(ANDROID_LOG_INFO, "BeepingCoreLibInfo",
                       text2);  // Or ANDROID_LOG_INFO, ...
   //__android_log_write(ANDROID_LOG_INFO, "BeepingCoreLibInfo",
-  //pStringDecoded);//Or ANDROID_LOG_INFO, ...
+  // pStringDecoded);//Or ANDROID_LOG_INFO, ...
 #endif
 
   while (getSizeFilledBlockCircularBuffer() >= mSizeBlockCircularBuffer - 1) {
@@ -594,9 +597,9 @@ int DecoderNonAudibleMultiTone::ComputeStats() {
       */
       // Increment base freq for even and not for odd
       if ((mDecoding % 3) == 1) {
-        evalToneBin += Globals::nBinsOffsetForNonAudibleMultiTone;
+        evalToneBin += m_config.nBinsOffsetForNonAudibleMultiTone;
       } else if ((mDecoding % 3) == 2) {
-        evalToneBin += Globals::nBinsOffsetForNonAudibleMultiTone * 2;
+        evalToneBin += m_config.nBinsOffsetForNonAudibleMultiTone * 2;
       }
 
       for (int n = 0; n < mSizeTokenBinAnal; n++) {

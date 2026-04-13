@@ -14,7 +14,8 @@ class ReedSolomon;
 
 class DecoderAudibleMultiTone : public Decoder {
  public:
-  DecoderAudibleMultiTone(float sr, int buffsize, int windowSize);
+  DecoderAudibleMultiTone(const BeepingConfig& config, float sr, int buffsize,
+                          int windowSize);
   ~DecoderAudibleMultiTone(void);
 
   int* mIdxs;

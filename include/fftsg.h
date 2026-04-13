@@ -223,6 +223,9 @@ macro definitions
 
 #include "defines_ooura.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-private-field"
+
 class CFFTOoura {
   // constructor and destructor
  public:
@@ -3376,5 +3379,7 @@ class CFFTOoura {
     a[m] *= wki;
   }
 };
+
+#pragma clang diagnostic pop
 
 #endif  //__fftsg__

@@ -2,122 +2,8 @@
 #include <math.h>
 
 namespace Globals {
-// float durToken = 0.1f; //dur in seconds for each token
-// For mSizeBlockCircularBuffer = 70 > tokenSize = 35frames
-// float durToken = 0.10158730f;
-// //(35*(float)mSpectralAnalysis->mHopSize/mSampleRate) = 0.10158730158730159
-float durToken =
-    0.104489796f;  //(18*(float)mSpectralAnalysis->mHopSize / mSampleRate) =
-                   //0.104489796 (when windowssize= 2048 & hopsize=256
-
-// float durFade = 0.075f; //% of token duration for fade in and fadeout
-float durFade = 0.075f;  //% of token duration for fade in and fadeout
-float pi = 3.14159265358979323846f;
-float two_pi = 2.f * 3.14159265358979323846f;
-float tokenAmplitude = 0.7f;  // -3dB (For second screen)
-
-// If we want to change this variable and meke them different for each mode then
-// we will need to revise the DecoderAllMultiTone class parameters!!
-int numTokensAll = 32;
-int numTonesAll = 9;
-
-int numTokensAudible = numTokensAll;
-int numTokensNonAudible = numTokensAll;
-int numTokensHidden = numTokensAll;
-int numTokensCustom = numTokensAll;
-
-int numTonesAudibleMultiTone =
-    numTonesAll;  // was 9, 10 for tones not closer than 2 intervals
-int numTonesNonAudibleMultiTone =
-    numTonesAll;  // was 9, 10 for tones not closer than 2 intervals
-int numTonesHiddenMultiTone =
-    numTonesAll;  // was 9, 10 for tones not closer than 2 intervals
-int numTonesCustomMultiTone =
-    numTonesAll;  // was 9, 10 for tones not closer than 2 intervals
-
-// int nBinsOffsetForMultiTone = 18;
-// float freqOffsetForMultiTone = 387.597656f; //18.f/mFreq2Bin=387.597656,
-// mFreq2Bin=0.0464399084
-int nBinsOffsetForAudibleMultiTone = 12;
-float freqOffsetForAudibleMultiTone =
-    258.398442f;  // 12.f/mFreq2Bin=258.398442491, mFreq2Bin=0.0464399084
-                  // int nBinsOffsetForNonAudibleMultiTone = 9;
-// float freqOffsetForNonAudibleMultiTone = 193.79883186849696f;
-// //9.f/mFreq2Bin=193.79883186849696, mFreq2Bin=0.0464399084 int
-// nBinsOffsetForNonAudibleMultiTone = 7; float freqOffsetForNonAudibleMultiTone
-// = 150.73242478660875f; //7.f/mFreq2Bin=150.73242478660875f,
-// mFreq2Bin=0.0464399084 int nBinsOffsetForNonAudibleMultiTone = 6; float
-// freqOffsetForNonAudibleMultiTone = 129.19922124566464f;
-// //6.f/mFreq2Bin=129.19922124566464f, mFreq2Bin=0.0464399084 int
-// nBinsOffsetForNonAudibleMultiTone = 5; float freqOffsetForNonAudibleMultiTone
-// = 107.66601770472053f; //5.f/mFreq2Bin=107.66601770472053f,
-// mFreq2Bin=0.0464399084
-int nBinsOffsetForNonAudibleMultiTone = 4;
-float freqOffsetForNonAudibleMultiTone =
-    86.1328141638f;  // 4.f/mFreq2Bin=86.1328141638f, mFreq2Bin=0.0464399084
-
-int nBinsOffsetForHiddenMultiTone = 3;
-float freqOffsetForHiddenMultiTone =
-    64.5996106228f;  // 3.f/mFreq2Bin=64.5996106228f, mFreq2Bin=0.0464399084
-
-float freqBaseForCustomMultiTone = 12000.f;  // default
-int beepsSeparationForCustomMultiTone = 1;   // default
-// int nBinsOffsetForCustomMultiTone = 3;
-int nBinsOffsetForCustomMultiTone = 2 + beepsSeparationForCustomMultiTone;
-float freqOffsetForCustomMultiTone =
-    64.5996106228f;  // 3.f/mFreq2Bin=64.5996106228f, mFreq2Bin=0.0464399084
-// char frontDoorTokens[2] = {'a', 'f'}; //idx: 10, 15
-// char frontDoorTokens[2] = {'b', 'm'}; //idx: 11, 22
-char frontDoorTokens[2] = {'1', 'o'};  // idx: 2, 24
-
-int synthMode = 0;
-float synthVolume = 0.f;
-
-const int numFrontDoorTokens = 2;
-const int numWordTokens = 9;
-const int numCheckTokens = 1;
-const int numCorrectionTokens = 8;
-const int numMessageTokens =
-    numWordTokens + numCheckTokens +
-    numCorrectionTokens;  // 18 = 9 message (withouth front door tokens) + 1
-                          // check code + 8 correction code
-const int numTotalTokens = numFrontDoorTokens + numMessageTokens;
-
-int init(int fftsize, float samplerate) {
-  // float freq2Bin = (float)fftsize / samplerate;
-  float freq2Bin =
-      (float)fftsize /
-      44100.f;  // We hardcode at 44100.f because we set the separation of beeps
-                // in number od bins no matter if we are at 44.1Khz or 48Khz,
-                // the decoder will be mostly at 44Khz
-
-  nBinsOffsetForAudibleMultiTone = 12;
-  freqOffsetForAudibleMultiTone =
-      (float)nBinsOffsetForAudibleMultiTone /
-      freq2Bin;  // 12.f/mFreq2Bin=258.398442491, mFreq2Bin=0.0464399084
-
-  nBinsOffsetForNonAudibleMultiTone = 4;
-  freqOffsetForNonAudibleMultiTone =
-      (float)nBinsOffsetForNonAudibleMultiTone / freq2Bin;
-  // freqOffsetForNonAudibleMultiTone = 86.1328141638f;
-  // //4.f/mFreq2Bin=86.1328141638f, mFreq2Bin=0.0464399084
-
-  nBinsOffsetForHiddenMultiTone = 3;
-  freqOffsetForHiddenMultiTone =
-      (float)nBinsOffsetForHiddenMultiTone / freq2Bin;
-  // freqOffsetForHiddenMultiTone = 64.5996106228f;
-  // //3.f/mFreq2Bin=64.5996106228f, mFreq2Bin=0.0464399084
-
-  // nBinsOffsetForCustomMultiTone = 3; //should have been set using the
-  // function BEEPING_SetCustomBeepsSeparation(...)
-  nBinsOffsetForCustomMultiTone = 2 + beepsSeparationForCustomMultiTone;
-  freqOffsetForCustomMultiTone =
-      (float)nBinsOffsetForCustomMultiTone / freq2Bin;
-  // freqOffsetForCustomMultiTone = 64.5996106228f;
-  // //3.f/mFreq2Bin=64.5996106228f, mFreq2Bin=0.0464399084
-
-  return 0;
-}
+// All mutable state has been moved to BeepingConfig (per-instance).
+// Only pure functions and constexpr values remain here.
 
 int getIdxFromChar(char c) {
   if (c == '0')
@@ -1893,7 +1779,8 @@ void getFreqsFromIdxAudibleMultiTone(int idx, float samplingRate,
 
 // n is 0 or 1 for multitone mode
 void getFreqsFromIdxNonAudibleMultiTone(int idx, float samplingRate,
-                                        int windowSize, float** freqs) {
+                                        int windowSize, float freqOffset,
+                                        float** freqs) {
   // float freqs[2];
   // float* freqs = new float[2];
 
@@ -1907,10 +1794,10 @@ void getFreqsFromIdxNonAudibleMultiTone(int idx, float samplingRate,
   int* idxs = new int[2];
 
   getIdxsFromIdxNonAudibleMultiTone(idx, &idxs);
-  (*freqs)[0] =
-      getToneFromIdxNonAudibleMultiTone(idxs[0], samplingRate, windowSize);
-  (*freqs)[1] =
-      getToneFromIdxNonAudibleMultiTone(idxs[1], samplingRate, windowSize);
+  (*freqs)[0] = getToneFromIdxNonAudibleMultiTone(idxs[0], samplingRate,
+                                                  windowSize, freqOffset);
+  (*freqs)[1] = getToneFromIdxNonAudibleMultiTone(idxs[1], samplingRate,
+                                                  windowSize, freqOffset);
 
   delete[] idxs;
 
@@ -1919,7 +1806,7 @@ void getFreqsFromIdxNonAudibleMultiTone(int idx, float samplingRate,
 
 // n is 0 or 1 for multitone mode
 void getFreqsFromIdxHiddenMultiTone(int idx, float samplingRate, int windowSize,
-                                    float** freqs) {
+                                    float freqOffset, float** freqs) {
   // float freqs[2];
   // float* freqs = new float[2];
 
@@ -1933,10 +1820,10 @@ void getFreqsFromIdxHiddenMultiTone(int idx, float samplingRate, int windowSize,
   int* idxs = new int[2];
 
   getIdxsFromIdxHiddenMultiTone(idx, &idxs);
-  (*freqs)[0] =
-      getToneFromIdxHiddenMultiTone(idxs[0], samplingRate, windowSize);
-  (*freqs)[1] =
-      getToneFromIdxHiddenMultiTone(idxs[1], samplingRate, windowSize);
+  (*freqs)[0] = getToneFromIdxHiddenMultiTone(idxs[0], samplingRate, windowSize,
+                                              freqOffset);
+  (*freqs)[1] = getToneFromIdxHiddenMultiTone(idxs[1], samplingRate, windowSize,
+                                              freqOffset);
 
   delete[] idxs;
 
@@ -1945,6 +1832,7 @@ void getFreqsFromIdxHiddenMultiTone(int idx, float samplingRate, int windowSize,
 
 // n is 0 or 1 for multitone mode
 void getFreqsFromIdxCustomMultiTone(int idx, float samplingRate, int windowSize,
+                                    float freqBase, float freqOffset,
                                     float** freqs) {
   // float freqs[2];
   // float* freqs = new float[2];
@@ -1959,10 +1847,10 @@ void getFreqsFromIdxCustomMultiTone(int idx, float samplingRate, int windowSize,
   int* idxs = new int[2];
 
   getIdxsFromIdxCustomMultiTone(idx, &idxs);
-  (*freqs)[0] =
-      getToneFromIdxCustomMultiTone(idxs[0], samplingRate, windowSize);
-  (*freqs)[1] =
-      getToneFromIdxCustomMultiTone(idxs[1], samplingRate, windowSize);
+  (*freqs)[0] = getToneFromIdxCustomMultiTone(idxs[0], samplingRate, windowSize,
+                                              freqBase, freqOffset);
+  (*freqs)[1] = getToneFromIdxCustomMultiTone(idxs[1], samplingRate, windowSize,
+                                              freqBase, freqOffset);
 
   delete[] idxs;
 
@@ -1995,7 +1883,7 @@ float getToneFromIdxAudibleMultiTone(int idx, float samplingRate,
 // This function is called by getFreqsFromIdxNonAudibleMultiTone(...)
 // idx should be < numTonesNonAudibleMultiTone
 float getToneFromIdxNonAudibleMultiTone(int idx, float samplingRate,
-                                        int windowSize) {
+                                        int windowSize, float freqOffset) {
   float binToHz =
       samplingRate / windowSize;  // 21,5332Hz for 1 bin at 44100Hz-2048ws
 
@@ -2015,7 +1903,7 @@ float getToneFromIdxNonAudibleMultiTone(int idx, float samplingRate,
   // tokenDistanceInBins = (int)(455.f / binToHz + .5); //separation between
   // tokens arround 452Hz, we need to fit 9 tones between first and last bin
   int tokenDistanceInBins =
-      (int)(freqOffsetForNonAudibleMultiTone * 3.f / binToHz +
+      (int)(freqOffset * 3.f / binToHz +
             .5);  // separation between tokens arround ~387Hz, we need to fit 10
                   // tones between first and last bin
   // int tokenDistanceInBins = (int)(210.f / binToHz + .5); //separation between
@@ -2029,8 +1917,8 @@ float getToneFromIdxNonAudibleMultiTone(int idx, float samplingRate,
 
 // This function is called by getFreqsFromIdxNonAudibleMultiTone(...)
 // idx should be < numTonesNonAudibleMultiTone
-float getToneFromIdxHiddenMultiTone(int idx, float samplingRate,
-                                    int windowSize) {
+float getToneFromIdxHiddenMultiTone(int idx, float samplingRate, int windowSize,
+                                    float freqOffset) {
   float binToHz =
       samplingRate / windowSize;  // 21,5332Hz for 1 bin at 44100Hz-2048ws
 
@@ -2050,7 +1938,7 @@ float getToneFromIdxHiddenMultiTone(int idx, float samplingRate,
   // tokenDistanceInBins = (int)(455.f / binToHz + .5); //separation between
   // tokens arround 452Hz, we need to fit 9 tones between first and last bin
   int tokenDistanceInBins =
-      (int)(freqOffsetForHiddenMultiTone * 3.f / binToHz +
+      (int)(freqOffset * 3.f / binToHz +
             .5);  // separation between tokens arround ~387Hz, we need to fit 10
                   // tones between first and last bin int tokenDistanceInBins =
                   // (int)(210.f / binToHz + .5); //separation between token
@@ -2064,8 +1952,8 @@ float getToneFromIdxHiddenMultiTone(int idx, float samplingRate,
 
 // This function is called by getFreqsFromIdxCustomMultiTone(...)
 // idx should be < numTonesCustomMultiTone
-float getToneFromIdxCustomMultiTone(int idx, float samplingRate,
-                                    int windowSize) {
+float getToneFromIdxCustomMultiTone(int idx, float samplingRate, int windowSize,
+                                    float freqBase, float freqOffset) {
   float binToHz =
       samplingRate / windowSize;  // 21,5332Hz for 1 bin at 44100Hz-2048ws
 
@@ -2074,9 +1962,9 @@ float getToneFromIdxCustomMultiTone(int idx, float samplingRate,
   // binToHz + .5); //first token arround 16800Hz, last token arround 21447Hz
   // int firstFreqBin = (int)(17800.f / binToHz + .5); //first token arround
   // 17807.9Hz, last token arround 21425Hz
-  int firstFreqBin = (int)(Globals::freqBaseForCustomMultiTone / binToHz +
-                           .5);  // first token arround 18001.75Hz, last token
-                                 // arround 21490.13Hz
+  int firstFreqBin =
+      (int)(freqBase / binToHz + .5);  // first token arround 18001.75Hz, last
+                                       // token arround 21490.13Hz
 
   float firstFreq = firstFreqBin * binToHz;
 
@@ -2085,7 +1973,7 @@ float getToneFromIdxCustomMultiTone(int idx, float samplingRate,
   // tokenDistanceInBins = (int)(455.f / binToHz + .5); //separation between
   // tokens arround 452Hz, we need to fit 9 tones between first and last bin
   int tokenDistanceInBins =
-      (int)(freqOffsetForCustomMultiTone * 3.f / binToHz +
+      (int)(freqOffset * 3.f / binToHz +
             .5);  // separation between tokens arround ~387Hz, we need to fit 10
                   // tones between first and last bin int tokenDistanceInBins =
                   // (int)(210.f / binToHz + .5); //separation between token
@@ -2097,7 +1985,7 @@ float getToneFromIdxCustomMultiTone(int idx, float samplingRate,
   return firstFreq + idx * tokenDistanceInHz;
 }
 
-float getLoudnessFromIdx(int idx) {
+float getLoudnessFromIdx(int idx, int numTokens) {
   //    float maxAtt = 0.5f;
   //    float loudness = 1.f - maxAtt + (((float)idx/(float)(numFreqs-1)) *
   //    maxAtt); return loudness;
@@ -2105,8 +1993,7 @@ float getLoudnessFromIdx(int idx) {
   // apply a log scale attenaution for high freqs
   float maxAttdB = -6.f;
   float loudnessdB =
-      powf(10.f, maxAttdB * (1 - ((float)idx / (float)(numTokensAudible - 1))) /
-                     20.f);
+      powf(10.f, maxAttdB * (1 - ((float)idx / (float)(numTokens - 1))) / 20.f);
 
   return loudnessdB;
 }
@@ -2123,9 +2010,9 @@ void getLoudnessAudibleMultiToneFromIdx(int idx, float** freqsLoudness) {
 
   getIdxsFromIdxAudibleMultiTone(idx, &idxs);
   //(*freqs)[0] = getToneFromIdxAudibleMultiTone(idxs[0], samplingRate,
-  //windowSize);
+  // windowSize);
   //(*freqs)[1] = getToneFromIdxAudibleMultiTone(idxs[1], samplingRate,
-  //windowSize);
+  // windowSize);
 
   // apply a log scale attenaution for high freqs
   float maxAttdB = -6.f;
@@ -2158,9 +2045,9 @@ void getLoudnessNonAudibleMultiToneFromIdx(int idx, float** freqsLoudness) {
 
   getIdxsFromIdxNonAudibleMultiTone(idx, &idxs);
   //(*freqs)[0] = getToneFromIdxNonAudibleMultiTone(idxs[0], samplingRate,
-  //windowSize);
+  // windowSize);
   //(*freqs)[1] = getToneFromIdxNonAudibleMultiTone(idxs[1], samplingRate,
-  //windowSize);
+  // windowSize);
 
   // apply a log scale attenaution for high freqs
   // float maxAttdB = -6.f;
@@ -2195,9 +2082,9 @@ void getLoudnessHiddenMultiToneFromIdx(int idx, float** freqsLoudness) {
 
   getIdxsFromIdxHiddenMultiTone(idx, &idxs);
   //(*freqs)[0] = getToneFromIdxNonAudibleMultiTone(idxs[0], samplingRate,
-  //windowSize);
+  // windowSize);
   //(*freqs)[1] = getToneFromIdxNonAudibleMultiTone(idxs[1], samplingRate,
-  //windowSize);
+  // windowSize);
 
   // apply a log scale attenaution for high freqs
   // float maxAttdB = -6.f;
@@ -2232,9 +2119,9 @@ void getLoudnessCustomMultiToneFromIdx(int idx, float** freqsLoudness) {
 
   getIdxsFromIdxCustomMultiTone(idx, &idxs);
   //(*freqs)[0] = getToneFromIdxNonAudibleMultiTone(idxs[0], samplingRate,
-  //windowSize);
+  // windowSize);
   //(*freqs)[1] = getToneFromIdxNonAudibleMultiTone(idxs[1], samplingRate,
-  //windowSize);
+  // windowSize);
 
   // apply a log scale attenaution for high freqs
   // float maxAttdB = -6.f;

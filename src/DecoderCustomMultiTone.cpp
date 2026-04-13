@@ -21,33 +21,40 @@
 
 using namespace BEEPING;
 
-DecoderCustomMultiTone::DecoderCustomMultiTone(float samplingRate, int buffSize,
+DecoderCustomMultiTone::DecoderCustomMultiTone(const BeepingConfig& config,
+                                               float samplingRate, int buffSize,
                                                int windowSize)
-    : Decoder(samplingRate, buffSize, windowSize, Globals::numTokensCustom,
-              Globals::numTonesCustomMultiTone) {
+    : Decoder(config, samplingRate, buffSize, windowSize,
+              config.numTokensCustom, config.numTonesCustomMultiTone) {
 #ifdef _IOS_LOG_
   ios_log("C++ DecoderCustomMultiTone");
 #endif  //_IOS_LOG_
   mFreq2Bin = mSpectralAnalysis->mFftSize / mSampleRate;
   mFreqsBins = new int[mNumTones];
   for (int i = 0; i < mNumTones; i++)
-    mFreqsBins[i] = (int)(Globals::getToneFromIdxCustomMultiTone(i, mSampleRate,
-                                                                 mWindowSize) *
+    mFreqsBins[i] = (int)(Globals::getToneFromIdxCustomMultiTone(
+                              i, mSampleRate, mWindowSize,
+                              m_config.freqBaseForCustomMultiTone,
+                              m_config.freqOffsetForCustomMultiTone) *
                               mFreq2Bin +
                           .5);
 
   // Optimize size of block spectrogram (only needed bins in token space range)
-  mBeginBin = (int)(Globals::getToneFromIdxCustomMultiTone(0, mSampleRate,
-                                                           mWindowSize) *
+  mBeginBin = (int)(Globals::getToneFromIdxCustomMultiTone(
+                        0, mSampleRate, mWindowSize,
+                        m_config.freqBaseForCustomMultiTone,
+                        m_config.freqOffsetForCustomMultiTone) *
                         mFreq2Bin +
                     .5);
   mEndBin = (int)(Globals::getToneFromIdxCustomMultiTone(
-                      mNumTones - 1, mSampleRate, mWindowSize) *
+                      mNumTones - 1, mSampleRate, mWindowSize,
+                      m_config.freqBaseForCustomMultiTone,
+                      m_config.freqOffsetForCustomMultiTone) *
                       mFreq2Bin +
                   .5);
 
-  idxFrontDoorToken1 = Globals::getIdxFromChar(Globals::frontDoorTokens[0]);
-  idxFrontDoorToken2 = Globals::getIdxFromChar(Globals::frontDoorTokens[1]);
+  idxFrontDoorToken1 = Globals::getIdxFromChar(m_config.frontDoorTokens[0]);
+  idxFrontDoorToken2 = Globals::getIdxFromChar(m_config.frontDoorTokens[1]);
 
   mIdxs = new int[2];
 
@@ -245,14 +252,18 @@ int DecoderCustomMultiTone::GetDecodedData(char* stringDecoded) {
 }
 
 float DecoderCustomMultiTone::GetDecodingBeginFreq() {
-  return Globals::getToneFromIdxCustomMultiTone(0, mSampleRate, mWindowSize);
+  return Globals::getToneFromIdxCustomMultiTone(
+      0, mSampleRate, mWindowSize, m_config.freqBaseForCustomMultiTone,
+      m_config.freqOffsetForCustomMultiTone);
 }
 
 float DecoderCustomMultiTone::GetDecodingEndFreq() {
   return Globals::getToneFromIdxCustomMultiTone(
-      mNumTones, mSampleRate,
-      mWindowSize);  // we use mNumTones despite las tone is in idx:mNumTones-1
-                     // but we use some bins above last tone (to avoid reverb)
+      mNumTones, mSampleRate, mWindowSize, m_config.freqBaseForCustomMultiTone,
+      m_config.freqOffsetForCustomMultiTone);  // we use mNumTones despite las
+                                               // tone is in idx:mNumTones-1 but
+                                               // we use some bins above last
+                                               // tone (to avoid reverb)
 }
 
 int DecoderCustomMultiTone::GetSpectrum(float* spectrumBuffer) {
@@ -325,7 +336,7 @@ int DecoderCustomMultiTone::AnalyzeStartTokens(
   __android_log_write(ANDROID_LOG_INFO, "BeepingCoreLibInfo",
                       text);  // Or ANDROID_LOG_INFO, ...
   //__android_log_write(ANDROID_LOG_INFO, "BeepingCoreLibInfo",
-  //pStringDecoded);//Or ANDROID_LOG_INFO, ...
+  // pStringDecoded);//Or ANDROID_LOG_INFO, ...
 #endif
 
   mWritePosInBlockCircularBuffer =
@@ -339,7 +350,7 @@ int DecoderCustomMultiTone::AnalyzeStartTokens(
   __android_log_write(ANDROID_LOG_INFO, "BeepingCoreLibInfo",
                       text2);  // Or ANDROID_LOG_INFO, ...
   //__android_log_write(ANDROID_LOG_INFO, "BeepingCoreLibInfo",
-  //pStringDecoded);//Or ANDROID_LOG_INFO, ...
+  // pStringDecoded);//Or ANDROID_LOG_INFO, ...
 #endif
 
   while (getSizeFilledBlockCircularBuffer() >= mSizeBlockCircularBuffer - 1) {
@@ -602,9 +613,9 @@ int DecoderCustomMultiTone::ComputeStats() {
       */
       // Increment base freq for even and not for odd
       if ((mDecoding % 3) == 1) {
-        evalToneBin += Globals::nBinsOffsetForCustomMultiTone;
+        evalToneBin += m_config.nBinsOffsetForCustomMultiTone;
       } else if ((mDecoding % 3) == 2) {
-        evalToneBin += Globals::nBinsOffsetForCustomMultiTone * 2;
+        evalToneBin += m_config.nBinsOffsetForCustomMultiTone * 2;
       }
 
       for (int n = 0; n < mSizeTokenBinAnal; n++) {

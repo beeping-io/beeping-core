@@ -1,6 +1,8 @@
 #ifndef __DECODER__
 #define __DECODER__
 
+#include <BeepingConfig.h>
+
 #include <vector>
 
 #define MAX_DECODE_STRING_SIZE 30  // max decoded string size is 30
@@ -21,8 +23,9 @@ struct sTokenProbs {
 
 class Decoder {
  public:
-  Decoder(float sr, int buffsize, int windowSize, int numTokens, int numTones);
-  ~Decoder(void);
+  Decoder(const BeepingConfig& config, float sr, int buffsize, int windowSize,
+          int numTokens, int numTones);
+  virtual ~Decoder(void);
 
   virtual int DecodeAudioBuffer(float* audioBuffer, int size);
   virtual int GetDecodedData(char* stringDecoded);
@@ -163,6 +166,8 @@ class Decoder {
   float mConfidence;
 
   float mReceivedBeepsVolume;
+
+  const BeepingConfig& m_config;
 };
 }  // namespace BEEPING
 
