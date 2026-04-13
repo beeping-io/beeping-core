@@ -88,44 +88,38 @@ install(EXPORT BeepingCoreTargets
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/BeepingCore
 )
 
+# --- Catch2 (test framework) ---
+
+FetchContent_Declare(
+  Catch2
+  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+  GIT_TAG        v3.7.1
+  GIT_SHALLOW    TRUE
+)
+FetchContent_MakeAvailable(Catch2)
+
 # --- Tests ---
 
 if(BUILD_TESTING)
   enable_testing()
 
-  add_executable(BeepingCoreLifecycleTest
-    tests/BeepingCoreLifecycleTest.cpp
-  )
-  target_link_libraries(BeepingCoreLifecycleTest PRIVATE BeepingCore)
-  add_test(NAME BeepingCoreLifecycleTest COMMAND BeepingCoreLifecycleTest)
-
-  add_executable(ThreadSafetyStressTest
-    tests/ThreadSafetyStressTest.cpp
-  )
-  target_link_libraries(ThreadSafetyStressTest PRIVATE BeepingCore)
-  if(NOT WIN32)
-    target_link_libraries(ThreadSafetyStressTest PRIVATE pthread)
-  endif()
-  if(BEEPING_ENABLE_TSAN)
-    beeping_enable_tsan(ThreadSafetyStressTest)
-  endif()
-  add_test(NAME ThreadSafetyStressTest COMMAND ThreadSafetyStressTest)
-
-  add_executable(ConcurrentInstancesTest
-    tests/ConcurrentInstancesTest.cpp
-  )
-  target_link_libraries(ConcurrentInstancesTest PRIVATE BeepingCore)
-  if(NOT WIN32)
-    target_link_libraries(ConcurrentInstancesTest PRIVATE pthread)
-  endif()
-  if(BEEPING_ENABLE_TSAN)
-    beeping_enable_tsan(ConcurrentInstancesTest)
-  endif()
-  add_test(NAME ConcurrentInstancesTest COMMAND ConcurrentInstancesTest)
-
-  add_executable(UnitTests
+  add_executable(BeepingCoreTests
     tests/UnitTests.cpp
+    tests/RoundTripTests.cpp
+    tests/ConcurrencyTests.cpp
   )
-  target_link_libraries(UnitTests PRIVATE BeepingCore)
-  add_test(NAME UnitTests COMMAND UnitTests)
+  target_link_libraries(BeepingCoreTests PRIVATE BeepingCore Catch2::Catch2WithMain)
+  target_include_directories(BeepingCoreTests PRIVATE
+    ${spdlog_SOURCE_DIR}/include
+  )
+  target_compile_definitions(BeepingCoreTests PRIVATE SPDLOG_HEADER_ONLY)
+  if(NOT WIN32)
+    target_link_libraries(BeepingCoreTests PRIVATE pthread)
+  endif()
+  if(BEEPING_ENABLE_TSAN)
+    beeping_enable_tsan(BeepingCoreTests)
+  endif()
+
+  include(Catch)
+  catch_discover_tests(BeepingCoreTests)
 endif()
