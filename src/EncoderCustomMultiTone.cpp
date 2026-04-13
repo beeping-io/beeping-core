@@ -27,7 +27,7 @@ EncoderCustomMultiTone::EncoderCustomMultiTone(const BeepingConfig& config,
   mCurrentFreqs = new float[2];
   mCurrentFreqsLoudness = new float[2];
   BTRACE(
-      "EncoderCustomMultiTone::ctor sr=%.1f buf=%d win=%d tokens=%d tones=%d",
+      "EncoderCustomMultiTone::ctor sr={:.1f} buf={} win={} tokens={} tones={}",
       samplingRate, buffsize, windowSize, config.numTokensCustom,
       config.numTonesCustomMultiTone);
 }
@@ -42,8 +42,8 @@ int EncoderCustomMultiTone::EncodeDataToAudioBuffer(const char* stringToEncode,
                                                     int type, int size,
                                                     const char* melodyString,
                                                     int melodySize) {
-  BINFO("EncoderCustomMultiTone::Encode payload=\"%.*s\" len=%d type=%d", size,
-        stringToEncode, size, type);
+  BINFO("EncoderCustomMultiTone::Encode payload=\"{}\" len={} type={}",
+        std::string_view(stringToEncode, size), size, type);
 
   memset(mAudioBufferEncodedString, 0,
          mNumMaxSamplesEncodedString * sizeof(float));
@@ -85,7 +85,7 @@ int EncoderCustomMultiTone::EncodeDataToAudioBuffer(const char* stringToEncode,
   // get RS code to transmit
   mReedSolomon->GetCode(digits);
 
-  BDEBUG("EncoderCustomMultiTone::Encode RS encoded %d digits",
+  BDEBUG("EncoderCustomMultiTone::Encode RS encoded {} digits",
          (int)digits.size());
 
   double phase1 = 0.0;
@@ -163,8 +163,9 @@ int EncoderCustomMultiTone::EncodeDataToAudioBuffer(const char* stringToEncode,
         //END LEGATO WITH NEXT NOTE
     */
 
-    BTRACE("EncoderCustomMultiTone::Encode digit[%d]=%d freq1=%.2f freq2=%.2f",
-           i, digits[i], mCurrentFreqs[0], mCurrentFreqs[1]);
+    BTRACE(
+        "EncoderCustomMultiTone::Encode digit[{}]={} freq1={:.2f} freq2={:.2f}",
+        i, digits[i], mCurrentFreqs[0], mCurrentFreqs[1]);
 
     for (int t = 0; t < samplesPerDigit; t++) {
       float factor =
@@ -322,7 +323,7 @@ int EncoderCustomMultiTone::EncodeDataToAudioBuffer(const char* stringToEncode,
     // phase2 = prev_phase2;
   }
 
-  BDEBUG("EncoderCustomMultiTone::Encode totalSamples=%d",
+  BDEBUG("EncoderCustomMultiTone::Encode totalSamples={}",
          mNumSamplesEncodedString);
 
   mReadIndexEncodedAudioBuffer =
@@ -378,7 +379,7 @@ int EncoderCustomMultiTone::EncodeDataToAudioBuffer(const char* stringToEncode,
   } else if (type == 2)  // Add melody to mAudioBufferEncodedString of size
                          // mNumSamplesEncodedString
   {
-    BDEBUG("EncoderCustomMultiTone::Encode applying melody, melodySize=%d",
+    BDEBUG("EncoderCustomMultiTone::Encode applying melody, melodySize={}",
            melodySize);
     std::vector<int> melodyDigits;
 
@@ -423,7 +424,7 @@ int EncoderCustomMultiTone::EncodeDataToAudioBuffer(const char* stringToEncode,
                           // mNumSamplesEncodedString
   {
     int sizeToFill = mnAudioSignatureSamples;
-    BDEBUG("EncoderCustomMultiTone::Encode applied audio signature %d samples",
+    BDEBUG("EncoderCustomMultiTone::Encode applied audio signature {} samples",
            sizeToFill);
     if (mnAudioSignatureSamples > mNumSamplesEncodedString)
       sizeToFill = mNumSamplesEncodedString;

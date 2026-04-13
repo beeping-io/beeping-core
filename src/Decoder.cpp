@@ -144,8 +144,8 @@ Decoder::Decoder(const BeepingConfig& config, float samplingRate, int buffSize,
               Globals::numCorrectionTokens];  // For reed solomon statistics
 
   BTRACE(
-      "Decoder::ctor sr=%.1f buf=%d win=%d tokens=%d tones=%d hop=%d "
-      "blockSize=%d",
+      "Decoder::ctor sr={:.1f} buf={} win={} tokens={} tones={} hop={} "
+      "blockSize={}",
       samplingRate, buffSize, windowSize, numTokens, numTones, mHopSize,
       mSizeBlockCircularBuffer);
 }

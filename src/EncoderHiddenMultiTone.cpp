@@ -27,7 +27,7 @@ EncoderHiddenMultiTone::EncoderHiddenMultiTone(const BeepingConfig& config,
   mCurrentFreqs = new float[2];
   mCurrentFreqsLoudness = new float[2];
   BTRACE(
-      "EncoderHiddenMultiTone::ctor sr=%.1f buf=%d win=%d tokens=%d tones=%d",
+      "EncoderHiddenMultiTone::ctor sr={:.1f} buf={} win={} tokens={} tones={}",
       samplingRate, buffsize, windowSize, config.numTokensHidden,
       config.numTonesHiddenMultiTone);
 }
@@ -42,8 +42,8 @@ int EncoderHiddenMultiTone::EncodeDataToAudioBuffer(const char* stringToEncode,
                                                     int type, int size,
                                                     const char* melodyString,
                                                     int melodySize) {
-  BINFO("EncoderHiddenMultiTone::Encode payload=\"%.*s\" len=%d type=%d", size,
-        stringToEncode, size, type);
+  BINFO("EncoderHiddenMultiTone::Encode payload=\"{}\" len={} type={}",
+        std::string_view(stringToEncode, size), size, type);
 
   memset(mAudioBufferEncodedString, 0,
          mNumMaxSamplesEncodedString * sizeof(float));
@@ -85,7 +85,7 @@ int EncoderHiddenMultiTone::EncodeDataToAudioBuffer(const char* stringToEncode,
   // get RS code to transmit
   mReedSolomon->GetCode(digits);
 
-  BDEBUG("EncoderHiddenMultiTone::Encode RS encoded %d digits",
+  BDEBUG("EncoderHiddenMultiTone::Encode RS encoded {} digits",
          (int)digits.size());
 
   double phase1 = 0.0;
@@ -161,8 +161,9 @@ int EncoderHiddenMultiTone::EncodeDataToAudioBuffer(const char* stringToEncode,
         }
         //END LEGATO WITH NEXT NOTE
     */
-    BTRACE("EncoderHiddenMultiTone::Encode digit[%d]=%d freq1=%.2f freq2=%.2f",
-           i, digits[i], mCurrentFreqs[0], mCurrentFreqs[1]);
+    BTRACE(
+        "EncoderHiddenMultiTone::Encode digit[{}]={} freq1={:.2f} freq2={:.2f}",
+        i, digits[i], mCurrentFreqs[0], mCurrentFreqs[1]);
     for (int t = 0; t < samplesPerDigit; t++) {
       float factor =
           m_config.tokenAmplitude - 0.05;  // 0.7-0.05 added for second screen
@@ -319,7 +320,7 @@ int EncoderHiddenMultiTone::EncodeDataToAudioBuffer(const char* stringToEncode,
     // phase2 = prev_phase2;
   }
 
-  BDEBUG("EncoderHiddenMultiTone::Encode totalSamples=%d",
+  BDEBUG("EncoderHiddenMultiTone::Encode totalSamples={}",
          mNumSamplesEncodedString);
 
   mReadIndexEncodedAudioBuffer =
@@ -375,7 +376,7 @@ int EncoderHiddenMultiTone::EncodeDataToAudioBuffer(const char* stringToEncode,
   } else if (type == 2)  // Add melody to mAudioBufferEncodedString of size
                          // mNumSamplesEncodedString
   {
-    BDEBUG("EncoderHiddenMultiTone::Encode applying melody, melodySize=%d",
+    BDEBUG("EncoderHiddenMultiTone::Encode applying melody, melodySize={}",
            melodySize);
     std::vector<int> melodyDigits;
 
@@ -419,7 +420,7 @@ int EncoderHiddenMultiTone::EncodeDataToAudioBuffer(const char* stringToEncode,
           // of size mNumSamplesEncodedString
   {
     int sizeToFill = mnAudioSignatureSamples;
-    BDEBUG("EncoderHiddenMultiTone::Encode applied audio signature %d samples",
+    BDEBUG("EncoderHiddenMultiTone::Encode applied audio signature {} samples",
            sizeToFill);
     if (mnAudioSignatureSamples > mNumSamplesEncodedString)
       sizeToFill = mNumSamplesEncodedString;

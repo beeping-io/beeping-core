@@ -15,10 +15,19 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(BUILD_TESTING "Build tests" ON)
 option(BUILD_SHARED_LIBS "Build shared library" OFF)
 option(BEEPING_ENABLE_TSAN "Build with ThreadSanitizer (Clang/GCC only)" OFF)
-option(BEEPING_ENABLE_DEBUG_LOG "Enable verbose debug logging to files" OFF)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(Sanitizers)
+
+# --- spdlog (header-only with bundled fmt) ---
+include(FetchContent)
+FetchContent_Declare(
+  spdlog
+  GIT_REPOSITORY https://github.com/gabime/spdlog.git
+  GIT_TAG        v1.15.2
+  GIT_SHALLOW    TRUE
+)
+FetchContent_Populate(spdlog)
 
 # --- Library sources ---
 
@@ -46,13 +55,14 @@ target_include_directories(BeepingCore PUBLIC
 )
 
 target_compile_features(BeepingCore PUBLIC cxx_std_20)
+# spdlog header-only: just need includes + SPDLOG_HEADER_ONLY define
+target_include_directories(BeepingCore PRIVATE
+  ${spdlog_SOURCE_DIR}/include
+)
+target_compile_definitions(BeepingCore PRIVATE SPDLOG_HEADER_ONLY)
 
 if(BEEPING_ENABLE_TSAN)
   beeping_enable_tsan(BeepingCore)
-endif()
-
-if(BEEPING_ENABLE_DEBUG_LOG)
-  target_compile_definitions(BeepingCore PUBLIC BEEPING_DEBUG_LOG)
 endif()
 
 # --- Install ---

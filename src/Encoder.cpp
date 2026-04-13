@@ -41,8 +41,8 @@ Encoder::Encoder(const BeepingConfig& config, float samplingRate, int buffsize,
 
   mReedSolomon = new ReedSolomon();
 
-  BTRACE("Encoder::ctor sr=%.1f buf=%d win=%d tokens=%d tones=%d", samplingRate,
-         buffsize, windowSize, numTokens, numTones);
+  BTRACE("Encoder::ctor sr={:.1f} buf={} win={} tokens={} tones={}",
+         samplingRate, buffsize, windowSize, numTokens, numTones);
 }
 
 Encoder::~Encoder(void) {
@@ -62,7 +62,7 @@ int Encoder::SetAudioSignature(int samplesSize, const float* samplesBuffer) {
     mnAudioSignatureSamples = 0;
     delete[] mAudioSignature;
     mAudioSignature = NULL;
-    BDEBUG("Encoder::SetAudioSignature samples=%d -> cleared", samplesSize);
+    BDEBUG("Encoder::SetAudioSignature samples={} -> cleared", samplesSize);
     return 0;
   }
 
@@ -80,7 +80,7 @@ int Encoder::SetAudioSignature(int samplesSize, const float* samplesBuffer) {
            mnAudioSignatureSamples * sizeof(float));
   }
 
-  BDEBUG("Encoder::SetAudioSignature samples=%d -> stored=%d", samplesSize,
+  BDEBUG("Encoder::SetAudioSignature samples={} -> stored={}", samplesSize,
          mnAudioSignatureSamples);
   return 0;
 }

@@ -27,7 +27,7 @@ SpectralAnalysis::SpectralAnalysis(Mode _mode, int _fftSize, int _windowSize,
   generateBlackmanHarris74Window(mWindow, mWindowSize);
   // generateBlackmanHarris92Window(mWindow,mWindowSize);
 
-  BTRACE("SpectralAnalysis::ctor fft=%d win=%d hop=%d specSize=%d", mFftSize,
+  BTRACE("SpectralAnalysis::ctor fft={} win={} hop={} specSize={}", mFftSize,
          mWindowSize, mHopSize, mSpecSize);
 }
 

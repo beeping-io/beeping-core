@@ -8,6 +8,7 @@
 
 #include <cmath>
 #include <iostream>
+#include <string_view>
 
 #if _MSC_VER >= 1800
 #include <algorithm>  //for max and min
@@ -27,8 +28,8 @@ EncoderNonAudibleMultiTone::EncoderNonAudibleMultiTone(
   mCurrentFreqs = new float[2];
   mCurrentFreqsLoudness = new float[2];
   BTRACE(
-      "EncoderNonAudibleMultiTone::ctor sr=%.1f buf=%d win=%d tokens=%d "
-      "tones=%d",
+      "EncoderNonAudibleMultiTone::ctor sr={:.1f} buf={} win={} tokens={} "
+      "tones={}",
       samplingRate, buffsize, windowSize, config.numTokensNonAudible,
       config.numTonesNonAudibleMultiTone);
 }
@@ -42,8 +43,8 @@ EncoderNonAudibleMultiTone::~EncoderNonAudibleMultiTone(void) {
 int EncoderNonAudibleMultiTone::EncodeDataToAudioBuffer(
     const char* stringToEncode, int type, int size, const char* melodyString,
     int melodySize) {
-  BINFO("EncoderNonAudibleMultiTone::Encode payload=\"%.*s\" len=%d type=%d",
-        size, stringToEncode, size, type);
+  BINFO("EncoderNonAudibleMultiTone::Encode payload=\"{}\" len={} type={}",
+        std::string_view(stringToEncode, size), size, type);
 
   memset(mAudioBufferEncodedString, 0,
          mNumMaxSamplesEncodedString * sizeof(float));
@@ -85,7 +86,7 @@ int EncoderNonAudibleMultiTone::EncodeDataToAudioBuffer(
   // get RS code to transmit
   mReedSolomon->GetCode(digits);
 
-  BDEBUG("EncoderNonAudibleMultiTone::Encode RS encoded %d digits",
+  BDEBUG("EncoderNonAudibleMultiTone::Encode RS encoded {} digits",
          (int)digits.size());
 
   double phase1 = 0.0;
@@ -163,8 +164,8 @@ int EncoderNonAudibleMultiTone::EncodeDataToAudioBuffer(
     */
 
     BTRACE(
-        "EncoderNonAudibleMultiTone::Encode digit[%d]=%d freq1=%.2f "
-        "freq2=%.2f",
+        "EncoderNonAudibleMultiTone::Encode digit[{}]={} freq1={:.2f} "
+        "freq2={:.2f}",
         i, digits[i], mCurrentFreqs[0], mCurrentFreqs[1]);
 
     for (int t = 0; t < samplesPerDigit; t++) {
@@ -323,7 +324,7 @@ int EncoderNonAudibleMultiTone::EncodeDataToAudioBuffer(
     // phase2 = prev_phase2;
   }
 
-  BDEBUG("EncoderNonAudibleMultiTone::Encode totalSamples=%d",
+  BDEBUG("EncoderNonAudibleMultiTone::Encode totalSamples={}",
          mNumSamplesEncodedString);
 
   mReadIndexEncodedAudioBuffer =
@@ -379,7 +380,7 @@ int EncoderNonAudibleMultiTone::EncodeDataToAudioBuffer(
   } else if (type == 2)  // Add melody to mAudioBufferEncodedString of size
                          // mNumSamplesEncodedString
   {
-    BDEBUG("EncoderNonAudibleMultiTone::Encode applying melody, melodySize=%d",
+    BDEBUG("EncoderNonAudibleMultiTone::Encode applying melody, melodySize={}",
            melodySize);
     std::vector<int> melodyDigits;
 
@@ -425,7 +426,7 @@ int EncoderNonAudibleMultiTone::EncodeDataToAudioBuffer(
   {
     int sizeToFill = mnAudioSignatureSamples;
     BDEBUG(
-        "EncoderNonAudibleMultiTone::Encode applied audio signature %d samples",
+        "EncoderNonAudibleMultiTone::Encode applied audio signature {} samples",
         sizeToFill);
     if (mnAudioSignatureSamples > mNumSamplesEncodedString)
       sizeToFill = mNumSamplesEncodedString;

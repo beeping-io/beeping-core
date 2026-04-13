@@ -54,11 +54,11 @@ DecoderAudible::DecoderAudible(const BeepingConfig& config, float samplingRate,
       Globals::/*DECODING_MODE::*/ DECODING_MODE_AUDIBLE;  // 0=AUDIBLE,
                                                            // 1=NONAUDIBLE,
                                                            // 2=HIDDEN, 3=CUSTOM
-  BTRACE("DecoderAudible::ctor sr=%.1f buf=%d win=%d tokens=%d tones=%d",
+  BTRACE("DecoderAudible::ctor sr={:.1f} buf={} win={} tokens={} tones={}",
          samplingRate, buffSize, windowSize, config.numTokensAudible,
          config.numTokensAudible);
-  BDEBUG("DecoderAudible::ctor freq2Bin=%.6f beginBin=%d endBin=%d", mFreq2Bin,
-         mBeginBin, mEndBin);
+  BDEBUG("DecoderAudible::ctor freq2Bin={:.6f} beginBin={} endBin={}",
+         mFreq2Bin, mBeginBin, mEndBin);
 }
 
 DecoderAudible::~DecoderAudible(void) {
@@ -80,7 +80,7 @@ int DecoderAudible::getSizeFilledBlockCircularBuffer() {
 // buffer to check if token was started in previous var mDecoding > 0 when token
 // has been found, once decoding is finished, mDecoding = 0
 int DecoderAudible::DecodeAudioBuffer(float* audioBuffer, int size) {
-  BTRACE("DecoderAudible::DecodeAudioBuffer size=%d decoding=%d", size,
+  BTRACE("DecoderAudible::DecodeAudioBuffer size={} decoding={}", size,
          mDecoding);
   int sizeWindow = mSpectralAnalysis->mWindowSize;
 
@@ -116,7 +116,7 @@ int DecoderAudible::DecodeAudioBuffer(float* audioBuffer, int size) {
         mDecodedValues.push_back(idxFrontDoorToken2);  // front-door symbols
 
         BINFO("DecoderAudible::DecodeAudioBuffer START TOKEN DETECTED");
-        BTRACE("DecoderAudible::DecodeAudioBuffer -> %d", -2);
+        BTRACE("DecoderAudible::DecodeAudioBuffer -> {}", -2);
         return -2;  //-2 means start token found
       }
     } else if ((mDecoding > 0) &&
@@ -129,9 +129,9 @@ int DecoderAudible::DecodeAudioBuffer(float* audioBuffer, int size) {
         mDecodedValues.push_back(ret);
         mDecoding++;
         BDEBUG(
-            "DecoderAudible::DecodeAudioBuffer token decoded idx=%d char='%c'",
+            "DecoderAudible::DecodeAudioBuffer token decoded idx={} char='{}'",
             ret, Globals::getCharFromIdx(ret));
-        BTRACE("DecoderAudible::DecodeAudioBuffer -> %d", ret);
+        BTRACE("DecoderAudible::DecodeAudioBuffer -> {}", ret);
         return ret;
       }
     } else if (mDecoding >
@@ -140,7 +140,7 @@ int DecoderAudible::DecodeAudioBuffer(float* audioBuffer, int size) {
     {
       mDecoding = 0;
       BINFO("DecoderAudible::DecodeAudioBuffer WORD COMPLETE");
-      BTRACE("DecoderAudible::DecodeAudioBuffer -> %d", -3);
+      BTRACE("DecoderAudible::DecodeAudioBuffer -> {}", -3);
       return -3;  //-3 means that complete word has been decoded
     }
   }
@@ -200,7 +200,7 @@ int DecoderAudible::GetDecodedData(char* stringDecoded) {
   mDecodedValues.clear();    // clear decoded values for next transmission
 
   int result = (len - Globals::numFrontDoorTokens) * messageOk;
-  BINFO("DecoderAudible::GetDecodedData -> rc=%d", result);
+  BINFO("DecoderAudible::GetDecodedData -> rc={}", result);
   return result;  // If message is wrong (token check failed) it returns a
                   // negative value
 }
@@ -320,7 +320,7 @@ int DecoderAudible::AnalyzeStartTokens(
 
       BDEBUG(
           "DecoderAudible::AnalyzeStartTokens FRONT-DOOR DETECTED "
-          "first=%d second=%d",
+          "first={} second={}",
           firstTokenRepetitions, secondTokenRepetitions);
       return 1;
     } else {
@@ -333,7 +333,7 @@ int DecoderAudible::AnalyzeStartTokens(
 }
 
 int DecoderAudible::AnalyzeToken(float* audioBuffer) {
-  BTRACE("DecoderAudible::AnalyzeToken decoding=%d", mDecoding);
+  BTRACE("DecoderAudible::AnalyzeToken decoding={}", mDecoding);
   // float *magSpectrum, float* realSpectrum, float* imagSpectrum
   mSpectralAnalysis->doFFT(audioBuffer, mSpectralAnalysis->mSpecMag,
                            mSpectralAnalysis->mSpecPhase);

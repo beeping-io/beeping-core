@@ -42,13 +42,14 @@ BeepingConfig compute_config(int windowSize, float sampleRate) {
     cfg.inaudibleBaseFreq = std::max(1000.f, nyquist - inaudibleSpan - margin);
   }
 
-  BDEBUG("compute_config windowSize=%d sampleRate=%.0f freq2Bin=%.6f",
+  BDEBUG("compute_config windowSize={} sampleRate={:.0f} freq2Bin={:.6f}",
          windowSize, sampleRate, freq2Bin);
-  BDEBUG("  audible: nBins=%d freqOffset=%.4f",
+  BDEBUG("  audible: nBins={} freqOffset={:.4f}",
          cfg.nBinsOffsetForAudibleMultiTone, cfg.freqOffsetForAudibleMultiTone);
-  BDEBUG("  inaudible: nBins=%d freqOffset=%.4f baseFreq=%.0f nyquist=%.0f",
-         cfg.nBinsOffsetForNonAudibleMultiTone,
-         cfg.freqOffsetForNonAudibleMultiTone, cfg.inaudibleBaseFreq, nyquist);
+  BDEBUG(
+      "  inaudible: nBins={} freqOffset={:.4f} baseFreq={:.0f} nyquist={:.0f}",
+      cfg.nBinsOffsetForNonAudibleMultiTone,
+      cfg.freqOffsetForNonAudibleMultiTone, cfg.inaudibleBaseFreq, nyquist);
 
   return cfg;
 }

@@ -82,10 +82,10 @@ DecoderCustomMultiTone::DecoderCustomMultiTone(const BeepingConfig& config,
                                                           // 1=NONAUDIBLE,
                                                           // 2=HIDDEN, 3=CUSTOM
   BTRACE(
-      "DecoderCustomMultiTone::ctor sr=%.1f buf=%d win=%d tokens=%d tones=%d",
+      "DecoderCustomMultiTone::ctor sr={:.1f} buf={} win={} tokens={} tones={}",
       samplingRate, buffSize, windowSize, config.numTokensCustom,
       config.numTonesCustomMultiTone);
-  BDEBUG("DecoderCustomMultiTone::ctor freq2Bin=%.6f beginBin=%d endBin=%d",
+  BDEBUG("DecoderCustomMultiTone::ctor freq2Bin={:.6f} beginBin={} endBin={}",
          mFreq2Bin, mBeginBin, mEndBin);
 }
 
@@ -115,7 +115,7 @@ int DecoderCustomMultiTone::getSizeFilledBlockCircularBuffer() {
 // buffer to check if token was started in previous var mDecoding > 0 when token
 // has been found, once decoding is finished, mDecoding = 0
 int DecoderCustomMultiTone::DecodeAudioBuffer(float* audioBuffer, int size) {
-  BTRACE("DecoderCustomMultiTone::DecodeAudioBuffer size=%d decoding=%d", size,
+  BTRACE("DecoderCustomMultiTone::DecodeAudioBuffer size={} decoding={}", size,
          mDecoding);
   int sizeWindow = mSpectralAnalysis->mWindowSize;
 
@@ -155,7 +155,7 @@ int DecoderCustomMultiTone::DecodeAudioBuffer(float* audioBuffer, int size) {
         mDecodedValues.push_back(idxFrontDoorToken2);  // front-door symbols
 
         BINFO("DecoderCustomMultiTone::DecodeAudioBuffer START TOKEN DETECTED");
-        BTRACE("DecoderCustomMultiTone::DecodeAudioBuffer -> %d", -2);
+        BTRACE("DecoderCustomMultiTone::DecodeAudioBuffer -> {}", -2);
         return -2;  //-2 means start token found
       }
     } else if ((mDecoding > 0) &&
@@ -168,10 +168,10 @@ int DecoderCustomMultiTone::DecodeAudioBuffer(float* audioBuffer, int size) {
         mDecodedValues.push_back(ret);
         mDecoding++;
         BDEBUG(
-            "DecoderCustomMultiTone::DecodeAudioBuffer token decoded idx=%d "
-            "char='%c'",
+            "DecoderCustomMultiTone::DecodeAudioBuffer token decoded idx={} "
+            "char='{}'",
             ret, Globals::getCharFromIdx(ret));
-        BTRACE("DecoderCustomMultiTone::DecodeAudioBuffer -> %d", ret);
+        BTRACE("DecoderCustomMultiTone::DecodeAudioBuffer -> {}", ret);
         return ret;
       }
     } else if (mDecoding >
@@ -188,7 +188,7 @@ int DecoderCustomMultiTone::DecodeAudioBuffer(float* audioBuffer, int size) {
       mReceivedBeepsVolume = mReceivedBeepsVolume / Globals::numMessageTokens;
 
       BINFO("DecoderCustomMultiTone::DecodeAudioBuffer WORD COMPLETE");
-      BTRACE("DecoderCustomMultiTone::DecodeAudioBuffer -> %d", -3);
+      BTRACE("DecoderCustomMultiTone::DecodeAudioBuffer -> {}", -3);
       return -3;  //-3 means that complete word has been decoded
     }
   }
@@ -266,7 +266,7 @@ int DecoderCustomMultiTone::GetDecodedData(char* stringDecoded) {
   mDecodedValues.clear();    // clear decoded values for next transmission
 
   int result = (len - Globals::numFrontDoorTokens) * messageOk;
-  BINFO("DecoderCustomMultiTone::GetDecodedData -> rc=%d", result);
+  BINFO("DecoderCustomMultiTone::GetDecodedData -> rc={}", result);
   return result;  // If message is wrong (token check failed) it returns a
                   // negative value
 }
@@ -410,7 +410,7 @@ int DecoderCustomMultiTone::AnalyzeStartTokens(
         mAccumulatedDecodingFrames = 0.0;
         BDEBUG(
             "DecoderCustomMultiTone::AnalyzeStartTokens FRONT-DOOR DETECTED "
-            "first=%d second=%d",
+            "first={} second={}",
             firstTokenRepetitions, secondTokenRepetitions);
         return 1;
       } else {
@@ -427,7 +427,7 @@ int DecoderCustomMultiTone::AnalyzeStartTokens(
 }
 
 int DecoderCustomMultiTone::AnalyzeToken(float* audioBuffer) {
-  BTRACE("DecoderCustomMultiTone::AnalyzeToken decoding=%d", mDecoding);
+  BTRACE("DecoderCustomMultiTone::AnalyzeToken decoding={}", mDecoding);
   // float *magSpectrum, float* realSpectrum, float* imagSpectrum
   mSpectralAnalysis->doFFT(audioBuffer, mSpectralAnalysis->mSpecMag,
                            mSpectralAnalysis->mSpecPhase);
