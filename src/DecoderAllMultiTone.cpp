@@ -1,3 +1,4 @@
+#include <BeepingDebug.h>
 #include <Decoder.h>
 #include <DecoderAllMultiTone.h>
 #include <Globals.h>
@@ -167,9 +168,15 @@ DecoderAllMultiTone::DecoderAllMultiTone(const BeepingConfig& config,
           idxFrontDoorToken2, &(idxTonesFrontDoorToken2Array[t]));
     }
   }
+  BTRACE("DecoderAllMultiTone::ctor sr=%.1f buf=%d win=%d tokens=%d tones=%d",
+         samplingRate, buffSize, windowSize, config.numTokensAll,
+         config.numTonesAll);
+  BDEBUG("DecoderAllMultiTone::ctor freq2Bin=%.6f modes=%d", mFreq2Bin,
+         NUM_SIMULTANEOUS_DECODING_MODES);
 }
 
 DecoderAllMultiTone::~DecoderAllMultiTone(void) {
+  BTRACE("DecoderAllMultiTone::dtor");
   // delete[] mFreqsBins;
   for (int i = 0; i < NUM_SIMULTANEOUS_DECODING_MODES; i++)
     delete[] mFreqsBinsArray[i];
@@ -229,6 +236,8 @@ int DecoderAllMultiTone::getSizeFilledBlockCircularBuffer(int mode) {
 // buffer to check if token was started in previous var mDecoding > 0 when token
 // has been found, once decoding is finished, mDecoding = 0
 int DecoderAllMultiTone::DecodeAudioBuffer(float* audioBuffer, int size) {
+  BTRACE("DecoderAllMultiTone::DecodeAudioBuffer size=%d decoding=%d", size,
+         mDecoding);
   int sizeWindow = mSpectralAnalysis->mWindowSize;
 
   int i;
@@ -259,6 +268,10 @@ int DecoderAllMultiTone::DecodeAudioBuffer(float* audioBuffer, int size) {
       if (ret >= 1) {
         mDecoding = 1;
         mDecodingMode = ret - 1;  // 0=AUDIBLE, 1=NONAUDIBLE, 2=HIDDEN
+        BINFO(
+            "DecoderAllMultiTone::DecodeAudioBuffer START TOKEN DETECTED "
+            "mode=%d",
+            mDecodingMode);
         mConfidenceEnergyRatios = 0.f;
         mConfidenceRepetitions = 0.f;
         mConfidence = 0.f;  // reset confidence
@@ -281,6 +294,7 @@ int DecoderAllMultiTone::DecodeAudioBuffer(float* audioBuffer, int size) {
 
 #endif  // DEBUG_OUTPUT
 
+        BTRACE("DecoderAllMultiTone::DecodeAudioBuffer -> %d", -2);
         return -2;  //-2 means start token found
       }
     } else if ((mDecoding > 0) &&
@@ -292,6 +306,11 @@ int DecoderAllMultiTone::DecodeAudioBuffer(float* audioBuffer, int size) {
       if (ret >= 0) {
         mDecodedValues.push_back(ret);
         mDecoding++;
+        BDEBUG(
+            "DecoderAllMultiTone::DecodeAudioBuffer token decoded idx=%d "
+            "char='%c' mode=%d",
+            ret, Globals::getCharFromIdx(ret), mDecodingMode);
+        BTRACE("DecoderAllMultiTone::DecodeAudioBuffer -> %d", ret);
         return ret;
       }
     } else if (mDecoding >
@@ -307,6 +326,9 @@ int DecoderAllMultiTone::DecodeAudioBuffer(float* audioBuffer, int size) {
 
       mReceivedBeepsVolume = mReceivedBeepsVolume / Globals::numMessageTokens;
 
+      BINFO("DecoderAllMultiTone::DecodeAudioBuffer WORD COMPLETE mode=%d",
+            mDecodingMode);
+      BTRACE("DecoderAllMultiTone::DecodeAudioBuffer -> %d", -3);
       return -3;  //-3 means that complete word has been decoded
     }
   }
@@ -383,9 +405,10 @@ int DecoderAllMultiTone::GetDecodedData(char* stringDecoded) {
              sizeof(char));  // initialize for next transmission
   mDecodedValues.clear();    // clear decoded values for next transmission
 
-  return (len - Globals::numFrontDoorTokens) *
-         messageOk;  // If message is wrong (token check failed) it returns a
-                     // negative value
+  int result = (len - Globals::numFrontDoorTokens) * messageOk;
+  BINFO("DecoderAllMultiTone::GetDecodedData -> rc=%d", result);
+  return result;  // If message is wrong (token check failed) it returns a
+                  // negative value
 }
 
 int DecoderAllMultiTone::GetSpectrum(float* spectrumBuffer) {
@@ -395,6 +418,7 @@ int DecoderAllMultiTone::GetSpectrum(float* spectrumBuffer) {
 int DecoderAllMultiTone::AnalyzeStartTokens(
     float* audioBuffer) {  // float *magSpectrum, float* realSpectrum, float*
                            // imagSpectrum
+  BTRACE("DecoderAllMultiTone::AnalyzeStartTokens");
   mSpectralAnalysis->doFFT(audioBuffer, mSpectralAnalysis->mSpecMag,
                            mSpectralAnalysis->mSpecPhase);
   memcpy(
@@ -526,6 +550,10 @@ int DecoderAllMultiTone::AnalyzeStartTokens(
           mEndStartTokenPosInBlockCircularBuffer =
               mReadPosInBlockCircularBufferArray[t];
           mAccumulatedDecodingFrames = 0.0;
+          BDEBUG(
+              "DecoderAllMultiTone::AnalyzeStartTokens FRONT-DOOR DETECTED "
+              "mode=%d first=%d second=%d",
+              t, firstTokenRepetitions, secondTokenRepetitions);
           return 1 + t;
         } else {
           // if (t >= (NUM_SIMULTANEOUS_DECODING_MODES-1))
@@ -546,6 +574,8 @@ int DecoderAllMultiTone::AnalyzeStartTokens(
 }
 
 int DecoderAllMultiTone::AnalyzeToken(float* audioBuffer, int mode) {
+  BTRACE("DecoderAllMultiTone::AnalyzeToken decoding=%d mode=%d", mDecoding,
+         mode);
   // float *magSpectrum, float* realSpectrum, float* imagSpectrum
   mSpectralAnalysis->doFFT(audioBuffer, mSpectralAnalysis->mSpecMag,
                            mSpectralAnalysis->mSpecPhase);
@@ -718,6 +748,7 @@ int DecoderAllMultiTone::AnalyzeToken(float* audioBuffer, int mode) {
 }
 
 int DecoderAllMultiTone::ComputeStatsStartTokens(int mode) {
+  BTRACE("DecoderAllMultiTone::ComputeStatsStartTokens mode=%d", mode);
   // energy mean in the alphabet frequency region
   float energyBlock = 0.f;
   // Old implementation using only instantaneous Spectrum
@@ -750,6 +781,7 @@ int DecoderAllMultiTone::ComputeStatsStartTokens(int mode) {
 // This function is called every token block, so not so frequent (every tokendur
 // ms)
 int DecoderAllMultiTone::ComputeStats(int mode) {
+  BTRACE("DecoderAllMultiTone::ComputeStats mode=%d", mode);
   // energy mean in the alphabet frequency region
   double energyBlock = 0.0;
 

@@ -1,3 +1,4 @@
+#include <BeepingDebug.h>
 #include <Encoder.h>
 #include <Globals.h>
 #include <ReedSolomon.h>
@@ -39,9 +40,13 @@ Encoder::Encoder(const BeepingConfig& config, float samplingRate, int buffsize,
   mWindowSize = windowSize;
 
   mReedSolomon = new ReedSolomon();
+
+  BTRACE("Encoder::ctor sr=%.1f buf=%d win=%d tokens=%d tones=%d", samplingRate,
+         buffsize, windowSize, numTokens, numTones);
 }
 
 Encoder::~Encoder(void) {
+  BTRACE("Encoder::dtor");
   if (mAudioSignature) {
     delete[] mAudioSignature;
     mAudioSignature = NULL;
@@ -57,6 +62,7 @@ int Encoder::SetAudioSignature(int samplesSize, const float* samplesBuffer) {
     mnAudioSignatureSamples = 0;
     delete[] mAudioSignature;
     mAudioSignature = NULL;
+    BDEBUG("Encoder::SetAudioSignature samples=%d -> cleared", samplesSize);
     return 0;
   }
 
@@ -74,6 +80,8 @@ int Encoder::SetAudioSignature(int samplesSize, const float* samplesBuffer) {
            mnAudioSignatureSamples * sizeof(float));
   }
 
+  BDEBUG("Encoder::SetAudioSignature samples=%d -> stored=%d", samplesSize,
+         mnAudioSignatureSamples);
   return 0;
 }
 

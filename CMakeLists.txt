@@ -15,6 +15,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(BUILD_TESTING "Build tests" ON)
 option(BUILD_SHARED_LIBS "Build shared library" OFF)
 option(BEEPING_ENABLE_TSAN "Build with ThreadSanitizer (Clang/GCC only)" OFF)
+option(BEEPING_ENABLE_DEBUG_LOG "Enable verbose debug logging to files" OFF)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(Sanitizers)
@@ -22,6 +23,7 @@ include(Sanitizers)
 # --- Library sources ---
 
 set(BEEPING_CORE_SOURCES
+  src/BeepingDebug.cpp
   src/BeepingConfig.cpp
   src/BeepingCoreLib_api.cpp
   src/Encoder.cpp
@@ -55,6 +57,10 @@ target_compile_features(BeepingCore PUBLIC cxx_std_20)
 
 if(BEEPING_ENABLE_TSAN)
   beeping_enable_tsan(BeepingCore)
+endif()
+
+if(BEEPING_ENABLE_DEBUG_LOG)
+  target_compile_definitions(BeepingCore PUBLIC BEEPING_DEBUG_LOG)
 endif()
 
 # --- Install ---
@@ -114,4 +120,10 @@ if(BUILD_TESTING)
     beeping_enable_tsan(ConcurrentInstancesTest)
   endif()
   add_test(NAME ConcurrentInstancesTest COMMAND ConcurrentInstancesTest)
+
+  add_executable(UnitTests
+    tests/UnitTests.cpp
+  )
+  target_link_libraries(UnitTests PRIVATE BeepingCore)
+  add_test(NAME UnitTests COMMAND UnitTests)
 endif()

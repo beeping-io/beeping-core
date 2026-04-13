@@ -1,3 +1,4 @@
+#include <BeepingDebug.h>
 #include <EncoderCustomMultiTone.h>
 #include <Globals.h>
 #include <ReedSolomon.h>
@@ -25,9 +26,14 @@ EncoderCustomMultiTone::EncoderCustomMultiTone(const BeepingConfig& config,
   //"EncoderNonAudibleMultiTone init" );
   mCurrentFreqs = new float[2];
   mCurrentFreqsLoudness = new float[2];
+  BTRACE(
+      "EncoderCustomMultiTone::ctor sr=%.1f buf=%d win=%d tokens=%d tones=%d",
+      samplingRate, buffsize, windowSize, config.numTokensCustom,
+      config.numTonesCustomMultiTone);
 }
 
 EncoderCustomMultiTone::~EncoderCustomMultiTone(void) {
+  BTRACE("EncoderCustomMultiTone::dtor");
   delete[] mCurrentFreqs;
   delete[] mCurrentFreqsLoudness;
 }
@@ -36,6 +42,9 @@ int EncoderCustomMultiTone::EncodeDataToAudioBuffer(const char* stringToEncode,
                                                     int type, int size,
                                                     const char* melodyString,
                                                     int melodySize) {
+  BINFO("EncoderCustomMultiTone::Encode payload=\"%.*s\" len=%d type=%d", size,
+        stringToEncode, size, type);
+
   memset(mAudioBufferEncodedString, 0,
          mNumMaxSamplesEncodedString * sizeof(float));
 
@@ -75,6 +84,9 @@ int EncoderCustomMultiTone::EncodeDataToAudioBuffer(const char* stringToEncode,
   mReedSolomon->Encode();
   // get RS code to transmit
   mReedSolomon->GetCode(digits);
+
+  BDEBUG("EncoderCustomMultiTone::Encode RS encoded %d digits",
+         (int)digits.size());
 
   double phase1 = 0.0;
   double phase2 = 0.0;
@@ -150,6 +162,9 @@ int EncoderCustomMultiTone::EncodeDataToAudioBuffer(const char* stringToEncode,
         }
         //END LEGATO WITH NEXT NOTE
     */
+
+    BTRACE("EncoderCustomMultiTone::Encode digit[%d]=%d freq1=%.2f freq2=%.2f",
+           i, digits[i], mCurrentFreqs[0], mCurrentFreqs[1]);
 
     for (int t = 0; t < samplesPerDigit; t++) {
       float factor =
@@ -307,12 +322,16 @@ int EncoderCustomMultiTone::EncodeDataToAudioBuffer(const char* stringToEncode,
     // phase2 = prev_phase2;
   }
 
+  BDEBUG("EncoderCustomMultiTone::Encode totalSamples=%d",
+         mNumSamplesEncodedString);
+
   mReadIndexEncodedAudioBuffer =
       0;  // New audio has been created, then reset read index
 
   if (type == 1)  // Add robotic sounds to mAudioBufferEncodedString of size
                   // mNumSamplesEncodedString
   {
+    BDEBUG("EncoderCustomMultiTone::Encode applying robotic sounds");
     // Initialize random seed:
     srand(time(NULL));
     for (int i = 0; i < static_cast<int>(digits.size()); i++) {
@@ -359,6 +378,8 @@ int EncoderCustomMultiTone::EncodeDataToAudioBuffer(const char* stringToEncode,
   } else if (type == 2)  // Add melody to mAudioBufferEncodedString of size
                          // mNumSamplesEncodedString
   {
+    BDEBUG("EncoderCustomMultiTone::Encode applying melody, melodySize=%d",
+           melodySize);
     std::vector<int> melodyDigits;
 
     // Add user symbols
@@ -402,6 +423,8 @@ int EncoderCustomMultiTone::EncodeDataToAudioBuffer(const char* stringToEncode,
                           // mNumSamplesEncodedString
   {
     int sizeToFill = mnAudioSignatureSamples;
+    BDEBUG("EncoderCustomMultiTone::Encode applied audio signature %d samples",
+           sizeToFill);
     if (mnAudioSignatureSamples > mNumSamplesEncodedString)
       sizeToFill = mNumSamplesEncodedString;
 

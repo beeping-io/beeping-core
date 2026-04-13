@@ -1,3 +1,4 @@
+#include <BeepingDebug.h>
 #include <Decoder.h>
 #include <DecoderNonAudibleMultiTone.h>
 #include <Globals.h>
@@ -76,9 +77,17 @@ DecoderNonAudibleMultiTone::DecoderNonAudibleMultiTone(
   mDecodingMode = Globals::
       /*DECODING_MODE::*/ DECODING_MODE_NONAUDIBLE;  // 0=AUDIBLE, 1=NONAUDIBLE,
                                                      // 2=HIDDEN, 3=CUSTOM
+  BTRACE(
+      "DecoderNonAudibleMultiTone::ctor sr=%.1f buf=%d win=%d tokens=%d "
+      "tones=%d",
+      samplingRate, buffSize, windowSize, config.numTokensNonAudible,
+      config.numTonesNonAudibleMultiTone);
+  BDEBUG("DecoderNonAudibleMultiTone::ctor freq2Bin=%.6f beginBin=%d endBin=%d",
+         mFreq2Bin, mBeginBin, mEndBin);
 }
 
 DecoderNonAudibleMultiTone::~DecoderNonAudibleMultiTone(void) {
+  BTRACE("DecoderNonAudibleMultiTone::dtor");
   delete[] mFreqsBins;
   delete[] mIdxs;
 
@@ -104,6 +113,8 @@ int DecoderNonAudibleMultiTone::getSizeFilledBlockCircularBuffer() {
 // has been found, once decoding is finished, mDecoding = 0
 int DecoderNonAudibleMultiTone::DecodeAudioBuffer(float* audioBuffer,
                                                   int size) {
+  BTRACE("DecoderNonAudibleMultiTone::DecodeAudioBuffer size=%d decoding=%d",
+         size, mDecoding);
   int sizeWindow = mSpectralAnalysis->mWindowSize;
 
   int i;
@@ -141,6 +152,10 @@ int DecoderNonAudibleMultiTone::DecodeAudioBuffer(float* audioBuffer,
         mDecodedValues.push_back(idxFrontDoorToken1);  // front-door symbols
         mDecodedValues.push_back(idxFrontDoorToken2);  // front-door symbols
 
+        BINFO(
+            "DecoderNonAudibleMultiTone::DecodeAudioBuffer START TOKEN "
+            "DETECTED");
+        BTRACE("DecoderNonAudibleMultiTone::DecodeAudioBuffer -> %d", -2);
         return -2;  //-2 means start token found
       }
     } else if ((mDecoding > 0) &&
@@ -152,6 +167,11 @@ int DecoderNonAudibleMultiTone::DecodeAudioBuffer(float* audioBuffer,
       if (ret >= 0) {
         mDecodedValues.push_back(ret);
         mDecoding++;
+        BDEBUG(
+            "DecoderNonAudibleMultiTone::DecodeAudioBuffer token decoded "
+            "idx=%d char='%c'",
+            ret, Globals::getCharFromIdx(ret));
+        BTRACE("DecoderNonAudibleMultiTone::DecodeAudioBuffer -> %d", ret);
         return ret;
       }
     } else if (mDecoding >
@@ -167,6 +187,8 @@ int DecoderNonAudibleMultiTone::DecodeAudioBuffer(float* audioBuffer,
 
       mReceivedBeepsVolume = mReceivedBeepsVolume / Globals::numMessageTokens;
 
+      BINFO("DecoderNonAudibleMultiTone::DecodeAudioBuffer WORD COMPLETE");
+      BTRACE("DecoderNonAudibleMultiTone::DecodeAudioBuffer -> %d", -3);
       return -3;  //-3 means that complete word has been decoded
     }
   }
@@ -243,9 +265,10 @@ int DecoderNonAudibleMultiTone::GetDecodedData(char* stringDecoded) {
              sizeof(char));  // initialize for next transmission
   mDecodedValues.clear();    // clear decoded values for next transmission
 
-  return (len - Globals::numFrontDoorTokens) *
-         messageOk;  // If message is wrong (token check failed) it returns a
-                     // negative value
+  int result = (len - Globals::numFrontDoorTokens) * messageOk;
+  BINFO("DecoderNonAudibleMultiTone::GetDecodedData -> rc=%d", result);
+  return result;  // If message is wrong (token check failed) it returns a
+                  // negative value
 }
 
 int DecoderNonAudibleMultiTone::GetSpectrum(float* spectrumBuffer) {
@@ -255,6 +278,7 @@ int DecoderNonAudibleMultiTone::GetSpectrum(float* spectrumBuffer) {
 int DecoderNonAudibleMultiTone::AnalyzeStartTokens(
     float* audioBuffer) {  // float *magSpectrum, float* realSpectrum, float*
                            // imagSpectrum
+  BTRACE("DecoderNonAudibleMultiTone::AnalyzeStartTokens");
   mSpectralAnalysis->doFFT(audioBuffer, mSpectralAnalysis->mSpecMag,
                            mSpectralAnalysis->mSpecPhase);
   memcpy(
@@ -370,6 +394,10 @@ int DecoderNonAudibleMultiTone::AnalyzeStartTokens(
         mReadPosInBlockCircularBuffer = mWritePosInBlockCircularBuffer;
         mEndStartTokenPosInBlockCircularBuffer = mReadPosInBlockCircularBuffer;
         mAccumulatedDecodingFrames = 0.0;
+        BDEBUG(
+            "DecoderNonAudibleMultiTone::AnalyzeStartTokens FRONT-DOOR "
+            "DETECTED first=%d second=%d",
+            firstTokenRepetitions, secondTokenRepetitions);
         return 1;
       } else {
         mReadPosInBlockCircularBuffer =
@@ -385,6 +413,7 @@ int DecoderNonAudibleMultiTone::AnalyzeStartTokens(
 }
 
 int DecoderNonAudibleMultiTone::AnalyzeToken(float* audioBuffer) {
+  BTRACE("DecoderNonAudibleMultiTone::AnalyzeToken decoding=%d", mDecoding);
   // float *magSpectrum, float* realSpectrum, float* imagSpectrum
   mSpectralAnalysis->doFFT(audioBuffer, mSpectralAnalysis->mSpecMag,
                            mSpectralAnalysis->mSpecPhase);
@@ -539,6 +568,7 @@ int DecoderNonAudibleMultiTone::AnalyzeToken(float* audioBuffer) {
 
 // This function is called every frame
 int DecoderNonAudibleMultiTone::ComputeStatsStartTokens() {
+  BTRACE("DecoderNonAudibleMultiTone::ComputeStatsStartTokens");
   // energy mean in the alphabet frequency region
   float energyBlock = 0.f;
   // Old implementation using only instantaneous Spectrum
@@ -570,6 +600,7 @@ int DecoderNonAudibleMultiTone::ComputeStatsStartTokens() {
 // This function is called every token block, so not so frequent (every tokendur
 // ms)
 int DecoderNonAudibleMultiTone::ComputeStats() {
+  BTRACE("DecoderNonAudibleMultiTone::ComputeStats");
   // energy mean in the alphabet frequency region
   double energyBlock = 0.0;
 

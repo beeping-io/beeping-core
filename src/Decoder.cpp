@@ -1,4 +1,5 @@
 #include <BeepingConfig.h>
+#include <BeepingDebug.h>
 #include <Decoder.h>
 #include <Globals.h>
 #include <ReedSolomon.h>
@@ -161,9 +162,16 @@ Decoder::Decoder(const BeepingConfig& config, float samplingRate, int buffSize,
   mDecodedValuesOrig =
       new int[Globals::numTotalTokens -
               Globals::numCorrectionTokens];  // For reed solomon statistics
+
+  BTRACE(
+      "Decoder::ctor sr=%.1f buf=%d win=%d tokens=%d tones=%d hop=%d "
+      "blockSize=%d",
+      samplingRate, buffSize, windowSize, numTokens, numTones, mHopSize,
+      mSizeBlockCircularBuffer);
 }
 
 Decoder::~Decoder(void) {
+  BTRACE("Decoder::dtor");
   for (int i = 0; i < mSizeBlockCircularBuffer; i++) delete[] mBlockSpecMag[i];
   delete[] mBlockSpecMag;
 

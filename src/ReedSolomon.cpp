@@ -1,3 +1,4 @@
+#include <BeepingDebug.h>
 #include <ReedSolomon.h>
 #include <math.h>
 #include <stdio.h>
@@ -156,6 +157,8 @@ void ReedSolomon::GeneratePoly() {
    connections specified by the elements of gg[], which was generated above.
    Codeword is   c(X) = data(X)*X**(nn-kk)+ b(X)          */
 void ReedSolomon::Encode() {
+  BTRACE("ReedSolomon::Encode msg_len=%d kk=%d nn=%d tt=%d", msg_len, kk, nn,
+         tt);
   int i, j;
   int feedback;
 
@@ -196,6 +199,7 @@ void ReedSolomon::Encode() {
    parity part of the transmitted codeword).  Of course, these insoluble cases
    can be returned as error flags to the calling routine if desired.   */
 void ReedSolomon::Decode() {
+  BTRACE("ReedSolomon::Decode nn=%d kk=%d tt=%d", nn, kk, tt);
   int i, j, u, q;
   int count = 0, syn_error = 0;
 

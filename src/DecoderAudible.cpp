@@ -1,3 +1,4 @@
+#include <BeepingDebug.h>
 #include <Decoder.h>
 #include <DecoderAudible.h>
 #include <Globals.h>
@@ -53,9 +54,15 @@ DecoderAudible::DecoderAudible(const BeepingConfig& config, float samplingRate,
       Globals::/*DECODING_MODE::*/ DECODING_MODE_AUDIBLE;  // 0=AUDIBLE,
                                                            // 1=NONAUDIBLE,
                                                            // 2=HIDDEN, 3=CUSTOM
+  BTRACE("DecoderAudible::ctor sr=%.1f buf=%d win=%d tokens=%d tones=%d",
+         samplingRate, buffSize, windowSize, config.numTokensAudible,
+         config.numTokensAudible);
+  BDEBUG("DecoderAudible::ctor freq2Bin=%.6f beginBin=%d endBin=%d", mFreq2Bin,
+         mBeginBin, mEndBin);
 }
 
 DecoderAudible::~DecoderAudible(void) {
+  BTRACE("DecoderAudible::dtor");
   delete[] mEvalNeighbTokenMags;
 
   delete[] mFreqsBins;
@@ -73,6 +80,8 @@ int DecoderAudible::getSizeFilledBlockCircularBuffer() {
 // buffer to check if token was started in previous var mDecoding > 0 when token
 // has been found, once decoding is finished, mDecoding = 0
 int DecoderAudible::DecodeAudioBuffer(float* audioBuffer, int size) {
+  BTRACE("DecoderAudible::DecodeAudioBuffer size=%d decoding=%d", size,
+         mDecoding);
   int sizeWindow = mSpectralAnalysis->mWindowSize;
 
   int i;
@@ -106,6 +115,8 @@ int DecoderAudible::DecodeAudioBuffer(float* audioBuffer, int size) {
         mDecodedValues.push_back(idxFrontDoorToken1);  // front-door symbols
         mDecodedValues.push_back(idxFrontDoorToken2);  // front-door symbols
 
+        BINFO("DecoderAudible::DecodeAudioBuffer START TOKEN DETECTED");
+        BTRACE("DecoderAudible::DecodeAudioBuffer -> %d", -2);
         return -2;  //-2 means start token found
       }
     } else if ((mDecoding > 0) &&
@@ -117,6 +128,10 @@ int DecoderAudible::DecodeAudioBuffer(float* audioBuffer, int size) {
       if (ret >= 0) {
         mDecodedValues.push_back(ret);
         mDecoding++;
+        BDEBUG(
+            "DecoderAudible::DecodeAudioBuffer token decoded idx=%d char='%c'",
+            ret, Globals::getCharFromIdx(ret));
+        BTRACE("DecoderAudible::DecodeAudioBuffer -> %d", ret);
         return ret;
       }
     } else if (mDecoding >
@@ -124,6 +139,8 @@ int DecoderAudible::DecodeAudioBuffer(float* audioBuffer, int size) {
                                            // complete word
     {
       mDecoding = 0;
+      BINFO("DecoderAudible::DecodeAudioBuffer WORD COMPLETE");
+      BTRACE("DecoderAudible::DecodeAudioBuffer -> %d", -3);
       return -3;  //-3 means that complete word has been decoded
     }
   }
@@ -182,9 +199,10 @@ int DecoderAudible::GetDecodedData(char* stringDecoded) {
              sizeof(char));  // initialize for next transmission
   mDecodedValues.clear();    // clear decoded values for next transmission
 
-  return (len - Globals::numFrontDoorTokens) *
-         messageOk;  // If message is wrong (token check failed) it returns a
-                     // negative value
+  int result = (len - Globals::numFrontDoorTokens) * messageOk;
+  BINFO("DecoderAudible::GetDecodedData -> rc=%d", result);
+  return result;  // If message is wrong (token check failed) it returns a
+                  // negative value
 }
 
 int DecoderAudible::GetSpectrum(float* spectrumBuffer) {
@@ -194,6 +212,7 @@ int DecoderAudible::GetSpectrum(float* spectrumBuffer) {
 int DecoderAudible::AnalyzeStartTokens(
     float* audioBuffer) {  // float *magSpectrum, float* realSpectrum, float*
                            // imagSpectrum
+  BTRACE("DecoderAudible::AnalyzeStartTokens");
   mSpectralAnalysis->doFFT(audioBuffer, mSpectralAnalysis->mSpecMag,
                            mSpectralAnalysis->mSpecPhase);
   memcpy(
@@ -299,6 +318,10 @@ int DecoderAudible::AnalyzeStartTokens(
       mEndStartTokenPosInBlockCircularBuffer = mReadPosInBlockCircularBuffer;
       mAccumulatedDecodingFrames = 0.0;
 
+      BDEBUG(
+          "DecoderAudible::AnalyzeStartTokens FRONT-DOOR DETECTED "
+          "first=%d second=%d",
+          firstTokenRepetitions, secondTokenRepetitions);
       return 1;
     } else {
       mReadPosInBlockCircularBuffer =
@@ -310,6 +333,7 @@ int DecoderAudible::AnalyzeStartTokens(
 }
 
 int DecoderAudible::AnalyzeToken(float* audioBuffer) {
+  BTRACE("DecoderAudible::AnalyzeToken decoding=%d", mDecoding);
   // float *magSpectrum, float* realSpectrum, float* imagSpectrum
   mSpectralAnalysis->doFFT(audioBuffer, mSpectralAnalysis->mSpecMag,
                            mSpectralAnalysis->mSpecPhase);
@@ -382,6 +406,7 @@ int DecoderAudible::AnalyzeToken(float* audioBuffer) {
 }
 
 int DecoderAudible::ComputeStatsStartTokens() {
+  BTRACE("DecoderAudible::ComputeStatsStartTokens");
   mSizeNighbBins = mBinWidth * 2;
   mSizeNeighbTokenBinAnal = mSizeNighbBins * 2;  // 8 //4 on top and 4 on bottom
   mEvalNeighbTokenMags = new float[mSizeNeighbTokenBinAnal];
@@ -434,6 +459,7 @@ int DecoderAudible::ComputeStatsStartTokens() {
 }
 
 int DecoderAudible::ComputeStats() {
+  BTRACE("DecoderAudible::ComputeStats");
   // energy mean in the alphabet frequency region
   double energyBlock = 0.0;
 

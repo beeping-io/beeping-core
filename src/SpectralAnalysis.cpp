@@ -1,3 +1,4 @@
+#include <BeepingDebug.h>
 #include <SpectralAnalysis.h>
 
 #include <cmath>
@@ -25,6 +26,9 @@ SpectralAnalysis::SpectralAnalysis(Mode _mode, int _fftSize, int _windowSize,
   mWindow = new float[mWindowSize];
   generateBlackmanHarris74Window(mWindow, mWindowSize);
   // generateBlackmanHarris92Window(mWindow,mWindowSize);
+
+  BTRACE("SpectralAnalysis::ctor fft=%d win=%d hop=%d specSize=%d", mFftSize,
+         mWindowSize, mHopSize, mSpecSize);
 }
 
 SpectralAnalysis::~SpectralAnalysis() {

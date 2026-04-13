@@ -1,3 +1,4 @@
+#include <BeepingDebug.h>
 #include <EncoderAudible.h>
 #include <Globals.h>
 #include <ReedSolomon.h>
@@ -18,14 +19,19 @@ EncoderAudible::EncoderAudible(const BeepingConfig& config, float samplingRate,
               config.numTokensAudible, config.numTokensAudible) {
   //__android_log_print(ANDROID_LOG_INFO, "BeepingCoreLibInfo", "EncoderAudible
   // init" );
+  BTRACE("EncoderAudible::ctor sr=%.1f buf=%d win=%d tokens=%d", samplingRate,
+         buffsize, windowSize, config.numTokensAudible);
 }
 
-EncoderAudible::~EncoderAudible(void) {}
+EncoderAudible::~EncoderAudible(void) { BTRACE("EncoderAudible::dtor"); }
 
 int EncoderAudible::EncodeDataToAudioBuffer(const char* stringToEncode,
                                             int type, int size,
                                             const char* melodyString,
                                             int melodySize) {
+  BINFO("EncoderAudible::Encode payload=\"%.*s\" len=%d type=%d", size,
+        stringToEncode, size, type);
+
   memset(mAudioBufferEncodedString, 0,
          mNumMaxSamplesEncodedString * sizeof(float));
 
@@ -66,6 +72,8 @@ int EncoderAudible::EncodeDataToAudioBuffer(const char* stringToEncode,
   // get RS code to transmit
   mReedSolomon->GetCode(digits);
 
+  BDEBUG("EncoderAudible::Encode RS encoded %d digits", (int)digits.size());
+
   for (int i = 0; i < static_cast<int>(digits.size()); i++) {
     //__android_log_print(ANDROID_LOG_INFO, "BeepingCoreLibInfo", "Digit %d",
     // i);
@@ -80,6 +88,8 @@ int EncoderAudible::EncodeDataToAudioBuffer(const char* stringToEncode,
         Globals::getFreqFromIdxAudible(digits[i], mSampleRate, mWindowSize);
     float currentFreqLoudness =
         Globals::getLoudnessFromIdx(digits[i], m_config.numTokensAudible);
+    BTRACE("EncoderAudible::Encode digit[%d]=%d freq=%.2f loudness=%.4f", i,
+           digits[i], currentFreq, currentFreqLoudness);
 
     for (int t = 0; t < samplesPerDigit; t++) {
       float factor = m_config.tokenAmplitude;
@@ -111,12 +121,15 @@ int EncoderAudible::EncodeDataToAudioBuffer(const char* stringToEncode,
     mNumSamplesEncodedString += samplesPerDigit;
   }
 
+  BDEBUG("EncoderAudible::Encode totalSamples=%d", mNumSamplesEncodedString);
+
   mReadIndexEncodedAudioBuffer =
       0;  // New audio has been created, then reset read index
 
   if (type == 1)  // Add robotic sounds to mAudioBufferEncodedString of size
                   // mNumSamplesEncodedString
   {
+    BDEBUG("EncoderAudible::Encode applying robotic sounds");
     // Initialize random seed:
     srand(time(NULL));
     for (int i = 0; i < static_cast<int>(digits.size()); i++) {
@@ -163,6 +176,7 @@ int EncoderAudible::EncodeDataToAudioBuffer(const char* stringToEncode,
   } else if (type == 2)  // Add melody to mAudioBufferEncodedString of size
                          // mNumSamplesEncodedString
   {
+    BDEBUG("EncoderAudible::Encode applying melody, melodySize=%d", melodySize);
     std::vector<int> melodyDigits;
 
     // Add user symbols
