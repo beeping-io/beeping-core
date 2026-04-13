@@ -365,7 +365,7 @@ int DecoderNonAudibleMultiTone::AnalyzeStartTokens(
       int posIdx =
           (mReadPosInBlockCircularBuffer + i) % mSizeBlockCircularBuffer;
 
-      if ((mBlockEnergyRatiosTokenIdx[posIdx] = idxTonesFrontDoorToken1[0]))
+      if (mBlockEnergyRatiosTokenIdx[posIdx] == idxTonesFrontDoorToken1[0])
         firstTokenRepetitions++;
     }
 
@@ -380,8 +380,9 @@ int DecoderNonAudibleMultiTone::AnalyzeStartTokens(
         int posIdx =
             (mReadPosInBlockCircularBuffer + i) % mSizeBlockCircularBuffer;
 
-        if ((mBlockEnergyRatiosTokenIdx[posIdx] = idxTonesFrontDoorToken2[0]) ||
-            (mBlockEnergyRatiosTokenIdx2[posIdx] = idxTonesFrontDoorToken2[0]))
+        if ((mBlockEnergyRatiosTokenIdx[posIdx] ==
+             idxTonesFrontDoorToken2[0]) ||
+            (mBlockEnergyRatiosTokenIdx2[posIdx] == idxTonesFrontDoorToken2[0]))
           secondTokenRepetitions++;
       }
 

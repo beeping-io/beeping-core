@@ -518,8 +518,8 @@ int DecoderAllMultiTone::AnalyzeStartTokens(
         int posIdx = (mReadPosInBlockCircularBufferArray[t] + i) %
                      mSizeBlockCircularBuffer;
 
-        if ((mBlockEnergyRatiosTokenIdx1Array[t][posIdx] =
-                 idxTonesFrontDoorToken1Array[t][0]))
+        if (mBlockEnergyRatiosTokenIdx1Array[t][posIdx] ==
+            idxTonesFrontDoorToken1Array[t][0])
           firstTokenRepetitions++;
       }
 
@@ -532,10 +532,10 @@ int DecoderAllMultiTone::AnalyzeStartTokens(
           int posIdx = (mReadPosInBlockCircularBufferArray[t] + i) %
                        mSizeBlockCircularBuffer;
 
-          if ((mBlockEnergyRatiosTokenIdx1Array[t][posIdx] =
-                   idxTonesFrontDoorToken2Array[t][0]) ||
-              (mBlockEnergyRatiosTokenIdx2Array[t][posIdx] =
-                   idxTonesFrontDoorToken2Array[t][0]))
+          if (mBlockEnergyRatiosTokenIdx1Array[t][posIdx] ==
+                  idxTonesFrontDoorToken2Array[t][0] ||
+              mBlockEnergyRatiosTokenIdx2Array[t][posIdx] ==
+                  idxTonesFrontDoorToken2Array[t][0])
             secondTokenRepetitions++;
         }
 

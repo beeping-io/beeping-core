@@ -99,7 +99,7 @@ Decoder::Decoder(const BeepingConfig& config, float samplingRate, int buffSize,
   // mnToleranceFrames = (int)((mSizeBlockCircularBuffer / 2.0) * 0.10 + 0.5f);
   // //10% tolerance
   mnToleranceFrames =
-      (int)((mSizeBlockCircularBuffer / 2.0) * 0.05 + 0.5f);  // 5% tolerance
+      (int)((mSizeBlockCircularBuffer / 2.0) * 0.25 + 0.5f);  // 25% tolerance
 
   mBlockTokenStatistics = new sTokenProbs[mSizeBlockCircularBuffer];
   memset(mBlockTokenStatistics, 0,
