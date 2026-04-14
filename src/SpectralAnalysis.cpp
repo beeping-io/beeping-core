@@ -44,7 +44,9 @@ SpectralAnalysis::~SpectralAnalysis() {
 
 void SpectralAnalysis::doFFT(float* _inputBuffer, float* magSpectrum,
                              float* imagSpectrum) {
-  for (int i = 0; i < mFftSize + 1; i++) {
+  // Fix: iterate up to mFftSize (not mFftSize+1) to avoid
+  // heap-buffer-overflow reading past _inputBuffer and mWindow
+  for (int i = 0; i < mFftSize; i++) {
     inputBuffer[i] = _inputBuffer[i] * mWindow[i];
   }
 
