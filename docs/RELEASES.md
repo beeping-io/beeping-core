@@ -17,6 +17,7 @@
 | 🌐 WASM | Emscripten | `beeping-core-wasm.tar.zst` |
 
 Each release also includes:
+
 - `SHA256SUMS.txt` — integrity checksums
 - `<artifact>.sig` — cosign keyless signature
 
