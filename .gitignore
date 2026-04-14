@@ -58,3 +58,4 @@ CMakeUserPresets.json
 build-lint/
 docs/doxygen-awesome/
 build/docs/
+.firebase/
