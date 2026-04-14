@@ -1,0 +1,343 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v1.0.0)'
+        required: true
+        default: 'v0.0.0-dev'
+
+permissions:
+  contents: write
+  id-token: write  # for cosign keyless
+
+env:
+  CMAKE_BUILD_TYPE: Release
+  RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # macOS — universal binary (arm64 + x86_64)
+  # ---------------------------------------------------------------------------
+  macos:
+    name: macOS universal
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DBUILD_TESTING=OFF \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DCMAKE_INSTALL_PREFIX=install
+
+      - name: Build
+        run: cmake --build build --config Release -j
+
+      - name: Install
+        run: cmake --install build
+
+      - name: Verify architectures
+        run: lipo -info install/lib/libBeepingCore.a
+
+      - name: Package
+        run: |
+          cd install
+          tar --zstd -cf ../beeping-core-macos-universal.tar.zst .
+          cd ..
+          shasum -a 256 beeping-core-macos-universal.tar.zst > beeping-core-macos-universal.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: beeping-core-macos-universal
+          path: |
+            beeping-core-macos-universal.tar.zst
+            beeping-core-macos-universal.sha256
+
+  # ---------------------------------------------------------------------------
+  # Linux — amd64
+  # ---------------------------------------------------------------------------
+  linux-amd64:
+    name: Linux amd64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install deps
+        run: sudo apt-get update && sudo apt-get install -y zstd
+
+      - name: Configure
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DBUILD_TESTING=OFF \
+            -DCMAKE_INSTALL_PREFIX=install
+
+      - name: Build
+        run: cmake --build build --config Release -j
+
+      - name: Install
+        run: cmake --install build
+
+      - name: Package
+        run: |
+          cd install
+          tar --zstd -cf ../beeping-core-linux-amd64.tar.zst .
+          cd ..
+          sha256sum beeping-core-linux-amd64.tar.zst > beeping-core-linux-amd64.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: beeping-core-linux-amd64
+          path: |
+            beeping-core-linux-amd64.tar.zst
+            beeping-core-linux-amd64.sha256
+
+  # ---------------------------------------------------------------------------
+  # Linux — arm64 (cross-compile)
+  # ---------------------------------------------------------------------------
+  linux-arm64:
+    name: Linux arm64
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install deps
+        run: sudo apt-get update && sudo apt-get install -y zstd
+
+      - name: Configure
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DBUILD_TESTING=OFF \
+            -DCMAKE_INSTALL_PREFIX=install
+
+      - name: Build
+        run: cmake --build build --config Release -j
+
+      - name: Install
+        run: cmake --install build
+
+      - name: Package
+        run: |
+          cd install
+          tar --zstd -cf ../beeping-core-linux-arm64.tar.zst .
+          cd ..
+          sha256sum beeping-core-linux-arm64.tar.zst > beeping-core-linux-arm64.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: beeping-core-linux-arm64
+          path: |
+            beeping-core-linux-arm64.tar.zst
+            beeping-core-linux-arm64.sha256
+
+  # ---------------------------------------------------------------------------
+  # Android NDK — arm64-v8a, armeabi-v7a, x86_64
+  # ---------------------------------------------------------------------------
+  android:
+    name: Android NDK (${{ matrix.abi }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        abi: [arm64-v8a, armeabi-v7a, x86_64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install deps
+        run: sudo apt-get update && sudo apt-get install -y zstd
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r26d
+
+      - name: Configure
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DBUILD_TESTING=OFF \
+            -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
+            -DANDROID_ABI=${{ matrix.abi }} \
+            -DANDROID_PLATFORM=android-21 \
+            -DCMAKE_INSTALL_PREFIX=install
+
+      - name: Build
+        run: cmake --build build --config Release -j
+
+      - name: Install
+        run: cmake --install build
+
+      - name: Package
+        run: |
+          cd install
+          tar --zstd -cf ../beeping-core-android-${{ matrix.abi }}.tar.zst .
+          cd ..
+          sha256sum beeping-core-android-${{ matrix.abi }}.tar.zst > beeping-core-android-${{ matrix.abi }}.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: beeping-core-android-${{ matrix.abi }}
+          path: |
+            beeping-core-android-${{ matrix.abi }}.tar.zst
+            beeping-core-android-${{ matrix.abi }}.sha256
+
+  # ---------------------------------------------------------------------------
+  # iOS — XCFramework (device + simulator)
+  # ---------------------------------------------------------------------------
+  ios:
+    name: iOS XCFramework
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build iOS device (arm64)
+        run: |
+          cmake -B build-ios-device \
+            -G Xcode \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DBUILD_TESTING=OFF \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
+            -DCMAKE_OSX_SYSROOT=iphoneos \
+            -DCMAKE_INSTALL_PREFIX=install-device
+          cmake --build build-ios-device --config Release -j
+          cmake --install build-ios-device --config Release
+
+      - name: Build iOS simulator (arm64)
+        run: |
+          cmake -B build-ios-sim \
+            -G Xcode \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DBUILD_TESTING=OFF \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
+            -DCMAKE_OSX_SYSROOT=iphonesimulator \
+            -DCMAKE_INSTALL_PREFIX=install-sim
+          cmake --build build-ios-sim --config Release -j
+          cmake --install build-ios-sim --config Release
+
+      - name: Create XCFramework
+        run: |
+          xcodebuild -create-xcframework \
+            -library install-device/lib/libBeepingCore.a -headers install-device/include \
+            -library install-sim/lib/libBeepingCore.a -headers install-sim/include \
+            -output BeepingCore.xcframework
+
+      - name: Package
+        run: |
+          tar --zstd -cf beeping-core-ios-xcframework.tar.zst BeepingCore.xcframework
+          shasum -a 256 beeping-core-ios-xcframework.tar.zst > beeping-core-ios-xcframework.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: beeping-core-ios-xcframework
+          path: |
+            beeping-core-ios-xcframework.tar.zst
+            beeping-core-ios-xcframework.sha256
+
+  # ---------------------------------------------------------------------------
+  # WASM — Emscripten
+  # ---------------------------------------------------------------------------
+  wasm:
+    name: WASM (Emscripten)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install deps
+        run: sudo apt-get update && sudo apt-get install -y zstd
+
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 3.1.64
+          actions-cache-folder: 'emsdk-cache'
+
+      - name: Configure
+        run: |
+          emcmake cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DBUILD_TESTING=OFF \
+            -DCMAKE_INSTALL_PREFIX=install
+
+      - name: Build
+        run: cmake --build build --config Release -j
+
+      - name: Install
+        run: cmake --install build
+
+      - name: Package
+        run: |
+          cd install
+          tar --zstd -cf ../beeping-core-wasm.tar.zst .
+          cd ..
+          sha256sum beeping-core-wasm.tar.zst > beeping-core-wasm.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: beeping-core-wasm
+          path: |
+            beeping-core-wasm.tar.zst
+            beeping-core-wasm.sha256
+
+  # ---------------------------------------------------------------------------
+  # Consolidate + sign + publish release
+  # ---------------------------------------------------------------------------
+  release:
+    name: Publish GitHub Release
+    needs: [macos, linux-amd64, linux-arm64, android, ios, wasm]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Consolidate SHA256SUMS
+        run: |
+          cd artifacts
+          cat *.sha256 > SHA256SUMS.txt
+          rm *.sha256
+          ls -la
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign artifacts (cosign keyless)
+        run: |
+          cd artifacts
+          for f in *.tar.zst; do
+            cosign sign-blob --yes --output-signature "$f.sig" "$f"
+          done
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: beeping-core ${{ env.RELEASE_TAG }}
+          generate_release_notes: true
+          files: |
+            artifacts/*.tar.zst
+            artifacts/*.sig
+            artifacts/SHA256SUMS.txt
