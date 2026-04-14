@@ -1,0 +1,65 @@
+# Doxygen config for beeping-core
+# Generates HTML API reference with doxygen-awesome-css theme.
+
+PROJECT_NAME           = "beeping-core"
+PROJECT_NUMBER         = 2.0.0
+PROJECT_BRIEF          = "C++20 library for encoding and decoding data over sound"
+PROJECT_LOGO           =
+
+OUTPUT_DIRECTORY       = build/docs
+CREATE_SUBDIRS         = NO
+OUTPUT_LANGUAGE        = English
+
+# --- Input ---
+INPUT                  = include README.md
+FILE_PATTERNS          = *.h *.md
+RECURSIVE              = YES
+USE_MDFILE_AS_MAINPAGE = README.md
+
+# --- Extract policy (public API only) ---
+EXTRACT_ALL            = NO
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = NO
+EXTRACT_LOCAL_CLASSES  = NO
+HIDE_UNDOC_MEMBERS     = YES
+HIDE_UNDOC_CLASSES     = YES
+
+# --- Output format ---
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+GENERATE_XML           = NO
+
+HTML_OUTPUT            = html
+HTML_FILE_EXTENSION    = .html
+
+# doxygen-awesome-css theme
+GENERATE_TREEVIEW      = YES
+DISABLE_INDEX          = NO
+FULL_SIDEBAR           = NO
+HTML_COLORSTYLE        = LIGHT
+HTML_EXTRA_STYLESHEET  = docs/doxygen-awesome/doxygen-awesome.css \
+                         docs/doxygen-awesome/doxygen-awesome-sidebar-only.css
+HTML_EXTRA_FILES       = docs/doxygen-awesome/doxygen-awesome-darkmode-toggle.js \
+                         docs/doxygen-awesome/doxygen-awesome-fragment-copy-button.js \
+                         docs/doxygen-awesome/doxygen-awesome-paragraph-link.js \
+                         docs/doxygen-awesome/doxygen-awesome-interactive-toc.js
+HTML_HEADER            = docs/doxygen-header.html
+
+# --- Quality ---
+QUIET                  = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = NO
+
+# --- Parsing ---
+JAVADOC_AUTOBRIEF      = YES
+QT_AUTOBRIEF           = YES
+BUILTIN_STL_SUPPORT    = YES
+OPTIMIZE_OUTPUT_FOR_C  = NO
+
+# --- Features ---
+GENERATE_TODOLIST      = NO
+GENERATE_TESTLIST      = NO
+GENERATE_BUGLIST       = NO
+GENERATE_DEPRECATEDLIST = YES
+SEARCHENGINE           = YES

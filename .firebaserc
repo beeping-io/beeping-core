@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "beeping-platform-dev"
+  },
+  "targets": {
+    "beeping-platform-dev": {
+      "hosting": {
+        "core-docs": [
+          "core-docs-beeping"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,45 @@
+name: Docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'include/**'
+      - 'README.md'
+      - 'Doxyfile'
+      - 'docs/**'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-deploy:
+    name: Build Doxygen + Deploy to Firebase Hosting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Doxygen
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y doxygen graphviz
+
+      - name: Fetch doxygen-awesome-css
+        run: |
+          git clone --depth 1 --branch v2.3.4 \
+            https://github.com/jothepro/doxygen-awesome-css.git \
+            docs/doxygen-awesome
+
+      - name: Build docs
+        run: doxygen Doxyfile
+
+      - name: Deploy to Firebase Hosting (core-docs target)
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BEEPING_PLATFORM_DEV }}
+          projectId: beeping-platform-dev
+          target: core-docs
+          channelId: live
