@@ -40,7 +40,7 @@ jobs:
   asan:
     name: AddressSanitizer
     runs-on: ubuntu-latest
-    continue-on-error: true  # Known heap-buffer-overflow in legacy FFT code
+    continue-on-error: true  # BEE-32: known OOB at low sample rates (32k/24k/22k)
     steps:
       - uses: actions/checkout@v4
 
