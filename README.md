@@ -77,6 +77,16 @@ full supply-chain security:
 See [`docs/verifying-releases.md`](docs/verifying-releases.md) for full
 verification instructions.
 
+## Using beeping-core in your project
+
+Two supported consumption paths via Conan 2.x:
+
+- **ConanCenter** (recipe pending approval) — `conan install beeping-core/0.0.0`
+- **GitHub Release fallback** (available now) — pre-built binaries or local
+  recipe export from a git tag
+
+Full guide with copy-paste examples: [`docs/conan.md`](docs/conan.md).
+
 ## License
 
 [Apache-2.0](LICENSE)
