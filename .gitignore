@@ -59,3 +59,4 @@ build-lint/
 docs/doxygen-awesome/
 build/docs/
 .firebase/
+__pycache__/
