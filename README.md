@@ -2,6 +2,23 @@
 
 C++20 library for encoding and decoding data over sound (Data Over Sound).
 
+<!-- Identity -->
+![License](https://img.shields.io/badge/License-Apache_2.0-blue)
+![status](https://img.shields.io/badge/status-early_development-orange)
+![platform](https://img.shields.io/badge/platform-Beeping-purple)
+![conventional commits](https://img.shields.io/badge/conventional_commits-1.0.0-yellow)
+
+<!-- Tech stack -->
+![C++](https://img.shields.io/badge/C++-20-00599C?logo=cplusplus&logoColor=white)
+![CMake](https://img.shields.io/badge/CMake-3.25+-064F8C?logo=cmake&logoColor=white)
+![Conan](https://img.shields.io/badge/Conan-2.x-6699CB?logo=conan&logoColor=white)
+
+<!-- CI / Quality -->
+[![Build & Test](https://github.com/beeping-io/beeping-core/actions/workflows/ci.yml/badge.svg)](https://github.com/beeping-io/beeping-core/actions/workflows/ci.yml)
+[![ThreadSanitizer](https://github.com/beeping-io/beeping-core/actions/workflows/tsan.yml/badge.svg)](https://github.com/beeping-io/beeping-core/actions/workflows/tsan.yml)
+[![Static Analysis](https://github.com/beeping-io/beeping-core/actions/workflows/static-analysis.yml/badge.svg)](https://github.com/beeping-io/beeping-core/actions/workflows/static-analysis.yml)
+[![Docs](https://github.com/beeping-io/beeping-core/actions/workflows/docs.yml/badge.svg)](https://core-docs.beeping.io)
+
 ## Requirements
 
 - C++20 compiler (Apple Clang 15+, GCC 13+, Clang 16+)
