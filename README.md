@@ -64,6 +64,19 @@ The install script auto-selects by `uname -s`. Pinning the profiles in-repo
 keeps CI and local builds bit-for-bit reproducible regardless of the host
 default profile.
 
+## Releases & verification
+
+Pre-built binaries for macOS, Linux, Android, iOS and WASM are published on
+[GitHub Releases](https://github.com/beeping-io/beeping-core/releases) with
+full supply-chain security:
+
+- **Cosign keyless signatures** (no long-lived keys)
+- **CycloneDX SBOM** (dependency inventory)
+- **SLSA L3 provenance** (build attestation)
+
+See [`docs/verifying-releases.md`](docs/verifying-releases.md) for full
+verification instructions.
+
 ## License
 
 [Apache-2.0](LICENSE)
