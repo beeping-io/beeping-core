@@ -324,6 +324,46 @@ jobs:
             beeping-core-sbom.cdx.json.sha256
 
   # ---------------------------------------------------------------------------
+  # Hashes — compute sha256 of every artifact for SLSA provenance
+  # ---------------------------------------------------------------------------
+  hashes:
+    name: Compute artifact hashes
+    needs: [macos, linux-amd64, linux-arm64, android, ios, wasm, sbom]
+    runs-on: ubuntu-latest
+    outputs:
+      hashes: ${{ steps.compute.outputs.hashes }}
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Compute base64-encoded hashes
+        id: compute
+        run: |
+          cd artifacts
+          HASHES=$(sha256sum *.tar.zst beeping-core-sbom.cdx.json | base64 -w0)
+          echo "hashes=$HASHES" >> "$GITHUB_OUTPUT"
+
+  # ---------------------------------------------------------------------------
+  # SLSA L3 provenance — reusable workflow (requires public repo + OIDC)
+  # ---------------------------------------------------------------------------
+  provenance:
+    name: SLSA L3 provenance
+    needs: [hashes]
+    permissions:
+      actions: read
+      id-token: write
+      contents: write
+    if: startsWith(github.ref, 'refs/tags/')
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
+    with:
+      base64-subjects: "${{ needs.hashes.outputs.hashes }}"
+      upload-assets: true
+      provenance-name: beeping-core.intoto.jsonl
+
+  # ---------------------------------------------------------------------------
   # Consolidate + sign + publish release
   # ---------------------------------------------------------------------------
   release:
