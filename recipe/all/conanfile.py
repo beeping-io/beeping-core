@@ -46,7 +46,7 @@ class BeepingCoreConan(ConanFile):
         cmake_layout(self, src_folder="src")
 
     def requirements(self):
-        self.requires("spdlog/1.15.2")
+        self.requires("spdlog/1.15.3")
 
     def validate(self):
         check_min_cppstd(self, self._min_cppstd)
