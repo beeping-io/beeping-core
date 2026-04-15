@@ -298,11 +298,37 @@ jobs:
             beeping-core-wasm.sha256
 
   # ---------------------------------------------------------------------------
+  # SBOM — CycloneDX inventory of all dependencies
+  # ---------------------------------------------------------------------------
+  sbom:
+    name: Generate SBOM (CycloneDX)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate SBOM with Syft
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: cyclonedx-json
+          output-file: beeping-core-sbom.cdx.json
+
+      - name: Compute SBOM checksum
+        run: sha256sum beeping-core-sbom.cdx.json > beeping-core-sbom.cdx.json.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: |
+            beeping-core-sbom.cdx.json
+            beeping-core-sbom.cdx.json.sha256
+
+  # ---------------------------------------------------------------------------
   # Consolidate + sign + publish release
   # ---------------------------------------------------------------------------
   release:
     name: Publish GitHub Release
-    needs: [macos, linux-amd64, linux-arm64, android, ios, wasm]
+    needs: [macos, linux-amd64, linux-arm64, android, ios, wasm, sbom]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
@@ -324,12 +350,19 @@ jobs:
       - name: Install cosign
         uses: sigstore/cosign-installer@v3
 
-      - name: Sign artifacts (cosign keyless)
+      - name: Sign binaries (cosign keyless)
         run: |
           cd artifacts
           for f in *.tar.zst; do
             cosign sign-blob --yes --output-signature "$f.sig" "$f"
           done
+
+      - name: Sign SBOM (cosign keyless)
+        run: |
+          cd artifacts
+          cosign sign-blob --yes \
+            --output-signature beeping-core-sbom.cdx.json.sig \
+            beeping-core-sbom.cdx.json
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -340,4 +373,5 @@ jobs:
           files: |
             artifacts/*.tar.zst
             artifacts/*.sig
+            artifacts/beeping-core-sbom.cdx.json
             artifacts/SHA256SUMS.txt
