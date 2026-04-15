@@ -1,0 +1,71 @@
+name: TSan
+
+on:
+  push:
+    branches: [main, develop, "milestone/**"]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  thread-sanitizer:
+    name: ThreadSanitizer (Ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Conan 2.x
+        run: |
+          pip install --upgrade pip
+          pip install "conan>=2.0,<3.0"
+
+      - name: Cache Conan packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.conan2
+          key: conan-${{ runner.os }}-${{ hashFiles('conan.lock', 'conanfile.py', 'profiles/*') }}
+          restore-keys: |
+            conan-${{ runner.os }}-
+
+      - name: Install Conan dependencies
+        run: ./scripts/conan-install.sh Debug
+
+      - name: Configure with TSan
+        run: cmake --preset tsan
+
+      - name: Build
+        run: cmake --build --preset tsan
+
+      - name: Run ThreadSanitizer stress test
+        id: tsan
+        run: |
+          set +e
+          ./build/TSan/ThreadSafetyStressTest 2>&1 | tee tsan-report.log
+          ./build/TSan/ConcurrentInstancesTest 2>&1 | tee -a tsan-report.log
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Summarise races
+        if: always()
+        run: |
+          echo "## ThreadSanitizer summary" >> "$GITHUB_STEP_SUMMARY"
+          RACE_COUNT=$(grep -c "WARNING: ThreadSanitizer: data race" tsan-report.log || echo 0)
+          echo "Races detected: **$RACE_COUNT**" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          grep "SUMMARY: ThreadSanitizer" tsan-report.log | sort -u >> "$GITHUB_STEP_SUMMARY" || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload TSan report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tsan-report
+          path: tsan-report.log
+          retention-days: 30

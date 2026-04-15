@@ -4,37 +4,52 @@
   "configurePresets": [
     {
       "name": "default",
-      "displayName": "Default (Debug)",
-      "binaryDir": "${sourceDir}/build/${presetName}",
+      "displayName": "Default (Debug + tests)",
+      "binaryDir": "${sourceDir}/build/Debug",
+      "toolchainFile": "${sourceDir}/build/Debug/generators/conan_toolchain.cmake",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "BUILD_TESTING": "ON"
       }
     },
     {
+      "name": "ci",
+      "displayName": "CI (Debug + tests)",
+      "binaryDir": "${sourceDir}/build/Debug",
+      "toolchainFile": "${sourceDir}/build/Debug/generators/conan_toolchain.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BUILD_TESTING": "ON",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
       "name": "release",
       "displayName": "Release",
-      "binaryDir": "${sourceDir}/build/${presetName}",
+      "binaryDir": "${sourceDir}/build/Release",
+      "toolchainFile": "${sourceDir}/build/Release/generators/conan_toolchain.cmake",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "BUILD_TESTING": "OFF"
       }
     },
     {
-      "name": "ci",
-      "displayName": "CI (Debug + tests)",
-      "binaryDir": "${sourceDir}/build/${presetName}",
+      "name": "tsan",
+      "displayName": "TSan (Debug + ThreadSanitizer + tests)",
+      "binaryDir": "${sourceDir}/build/TSan",
+      "toolchainFile": "${sourceDir}/build/Debug/generators/conan_toolchain.cmake",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "BUILD_TESTING": "ON",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+        "BEEPING_ENABLE_TSAN": "ON"
       }
     }
   ],
   "buildPresets": [
     { "name": "default", "configurePreset": "default" },
+    { "name": "ci",      "configurePreset": "ci" },
     { "name": "release", "configurePreset": "release" },
-    { "name": "ci", "configurePreset": "ci" }
+    { "name": "tsan",    "configurePreset": "tsan" }
   ],
   "testPresets": [
     {
@@ -45,6 +60,11 @@
     {
       "name": "ci",
       "configurePreset": "ci",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "tsan",
+      "configurePreset": "tsan",
       "output": { "outputOnFailure": true }
     }
   ]

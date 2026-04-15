@@ -1,170 +1,174 @@
 #ifndef __DECODER__
 #define __DECODER__
 
+#include <BeepingConfig.h>
+
 #include <vector>
 
-#define MAX_DECODE_STRING_SIZE 30 //max decoded string size is 30
+#define MAX_DECODE_STRING_SIZE 30  // max decoded string size is 30
 
-namespace BEEPING
-{
-  class SpectralAnalysis;
-  class ReedSolomon;
+namespace BEEPING {
+class SpectralAnalysis;
+class ReedSolomon;
 
-  struct sTokenProbs {
-    int idxToken;
-    float energyRatioToken;
-    int idxToneMax;
-    int idxToneSecond;
-    float energyRatioToneMax;
-    float energyRatioToneSecond;
-    float energyToken;
-  };
+struct sTokenProbs {
+  int idxToken;
+  float energyRatioToken;
+  int idxToneMax;
+  int idxToneSecond;
+  float energyRatioToneMax;
+  float energyRatioToneSecond;
+  float energyToken;
+};
 
+class Decoder {
+ public:
+  Decoder(const BeepingConfig& config, float sr, int buffsize, int windowSize,
+          int numTokens, int numTones);
+  virtual ~Decoder(void);
 
-  class Decoder
-  {
-  public:
-    Decoder(float sr, int buffsize, int windowSize, int numTokens, int numTones);
-    ~Decoder(void);
+  virtual int DecodeAudioBuffer(float* audioBuffer, int size);
+  virtual int GetDecodedData(char* stringDecoded);
 
-    virtual int DecodeAudioBuffer(float *audioBuffer, int size);
-    virtual int GetDecodedData(char *stringDecoded);
-    
-    float GetConfidenceError();
-    float GetConfidenceNoise();
-    float GetConfidence();
+  float GetConfidenceError();
+  float GetConfidenceNoise();
+  float GetConfidence();
 
-    float GetReceivedBeepsVolume();
+  float GetReceivedBeepsVolume();
 
-    int GetDecodedMode();
+  int GetDecodedMode();
 
-    virtual float GetDecodingBeginFreq();
-    virtual float GetDecodingEndFreq();
+  virtual float GetDecodingBeginFreq();
+  virtual float GetDecodingEndFreq();
 
-    int GetSpectrum(float *spectrumBuffer);
-    
-    virtual int AnalyzeStartTokens(float *audioBuffer);
-    virtual int AnalyzeToken(float *audioBuffer);
+  int GetSpectrum(float* spectrumBuffer);
 
-    virtual int ComputeStatsStartTokens(void);
-    virtual int ComputeStats(void);
+  virtual int AnalyzeStartTokens(float* audioBuffer);
+  virtual int AnalyzeToken(float* audioBuffer);
 
-    int getSizeFilledFrameCircularBuffer();
-    int getSizeFilledBlockCircularBuffer();
-    int getSizeFilledBlockCircularBuffer(int mode);
-       
-    virtual int DeReverbToken(const int nbins, int *freqsBins);
-    
-    virtual float ComputeBlockMagSpecSumsCurrentToken(int midFreqBin, int width, int nbins, std::vector<float> &sumPerFrame);
-    virtual float ComputeBlockMagSpecSumsLastToken(int midFreqBin, int width, int nbins, std::vector<float> &sumPerFrame);
+  virtual int ComputeStatsStartTokens(void);
+  virtual int ComputeStats(void);
 
-    float mSampleRate;
-    int mBufferSize;
+  int getSizeFilledFrameCircularBuffer();
+  int getSizeFilledBlockCircularBuffer();
+  int getSizeFilledBlockCircularBuffer(int mode);
 
-    int mDecoding;
-    //For multiple decoding mode (will be set after first token found and guessed decoding mode)
-    int mDecodingMode; //enum DECODING_MODE { NONAUDIBLE = 0, AUDIBLE = 1, HIDDEN = 2, CUSTOM = 3 };
+  virtual int DeReverbToken(const int nbins, int* freqsBins);
 
-    char mDecodedString[MAX_DECODE_STRING_SIZE]; //max decoded string size is 50
+  virtual float ComputeBlockMagSpecSumsCurrentToken(
+      int midFreqBin, int width, int nbins, std::vector<float>& sumPerFrame);
+  virtual float ComputeBlockMagSpecSumsLastToken(
+      int midFreqBin, int width, int nbins, std::vector<float>& sumPerFrame);
 
-    SpectralAnalysis* mSpectralAnalysis;
+  float mSampleRate;
+  int mBufferSize;
 
-    int mReadPosInFrameCircularBuffer; //For single decoding mode
-    int *mReadPosInBlockCircularBufferArray; //For multiple decoding mode
-    int mWritePosInFrameCircularBuffer;
-    int mSizeFrameCircularBuffer;
-    float *mCircularBufferFloat;
-    float *mAnalBufferFloat;
+  int mDecoding;
+  // For multiple decoding mode (will be set after first token found and guessed
+  // decoding mode)
+  int mDecodingMode;  // enum DECODING_MODE { NONAUDIBLE = 0, AUDIBLE = 1,
+                      // HIDDEN = 2, CUSTOM = 3 };
 
-    int mWindowSize;
-    int mHopSize;
+  char mDecodedString[MAX_DECODE_STRING_SIZE];  // max decoded string size is 50
 
-    int mNumTokens;
-    int mNumTones;
+  SpectralAnalysis* mSpectralAnalysis;
 
-    float mFreq2Bin;
+  int mReadPosInFrameCircularBuffer;        // For single decoding mode
+  int* mReadPosInBlockCircularBufferArray;  // For multiple decoding mode
+  int mWritePosInFrameCircularBuffer;
+  int mSizeFrameCircularBuffer;
+  float* mCircularBufferFloat;
+  float* mAnalBufferFloat;
 
-    int *mFreqsBins; //For single decoding mode
-    int **mFreqsBinsArray; //For multiple decoding mode
+  int mWindowSize;
+  int mHopSize;
 
-    int mBinWidth;
-    int mSizeTokenBinAnal;
-    float *mEvalTokenMags;
-    float *mEvalToneMags;
-    
-    //Region of interest Bin Idxs
-    int mBeginBin; //For single decoding mode
-    int mEndBin; //For single decoding mode
-    int *mBeginBinArray; //For multiple decoding mode
-    int *mEndBinArray; //For multiple decoding mode
+  int mNumTokens;
+  int mNumTones;
 
-    //int mFirstTokenBinOffsetInBlock;
-    //int mBeginBinBlock;
-    //int mEndBinBlock;
+  float mFreq2Bin;
 
-    int idxFrontDoorToken1;
-    int idxFrontDoorToken2;
-    
+  int* mFreqsBins;        // For single decoding mode
+  int** mFreqsBinsArray;  // For multiple decoding mode
 
-    //Token Statistics
-    float *mEnergy;
-    float *mEnergyRatios;
-    float *mEnergyStd;
-    float *mEnergyDiff;
+  int mBinWidth;
+  int mSizeTokenBinAnal;
+  float* mEvalTokenMags;
+  float* mEvalToneMags;
 
-    float *mEnergyRatiosSorted;
-    int *mEnergyRatiosIdx;
+  // Region of interest Bin Idxs
+  int mBeginBin;        // For single decoding mode
+  int mEndBin;          // For single decoding mode
+  int* mBeginBinArray;  // For multiple decoding mode
+  int* mEndBinArray;    // For multiple decoding mode
 
-    //BlockStatistics (circular buffer dur = 2 * tokendur)
-    int mReadPosInBlockCircularBuffer;
-    int mWritePosInBlockCircularBuffer;
-    int mSizeBlockCircularBuffer;
+  // int mFirstTokenBinOffsetInBlock;
+  // int mBeginBinBlock;
+  // int mEndBinBlock;
 
-    int mnToleranceFrames; //10% tolerance
-    
-    float **mBlockSpecMag;
+  int idxFrontDoorToken1;
+  int idxFrontDoorToken2;
 
-    //For Statistics (Confidence)
-    sTokenProbs *mBlockTokenStatistics; //For single decoding mode
-    sTokenProbs **mBlockTokenStatisticsArray; //For multiple decoding mode
+  // Token Statistics
+  float* mEnergy;
+  float* mEnergyRatios;
+  float* mEnergyStd;
+  float* mEnergyDiff;
 
-    int *mBlockEnergyRatiosTokenIdx; //For single decoding mode
-    int **mBlockEnergyRatiosTokenIdx1Array; //For multiple decoding mode
-    int *mBlockEnergyStdTokenIdx;
-    int *mBlockEnergyDiffTokenIdx;
+  float* mEnergyRatiosSorted;
+  int* mEnergyRatiosIdx;
 
-    int *mBlockEnergyRatiosTokenIdx2; //For single decoding mode
-    int **mBlockEnergyRatiosTokenIdx2Array; //For multiple decoding mode
-    int *mBlockEnergyStdTokenIdx2;
-    int *mBlockEnergyDiffTokenIdx2;
+  // BlockStatistics (circular buffer dur = 2 * tokendur)
+  int mReadPosInBlockCircularBuffer;
+  int mWritePosInBlockCircularBuffer;
+  int mSizeBlockCircularBuffer;
 
-    int *mBlockEnergyRatiosTokenIdx3; //For single decoding mode
-    int **mBlockEnergyRatiosTokenIdx3Array; //For multiple decoding mode
+  int mnToleranceFrames;  // 10% tolerance
 
-    int *mBlockEnergyRatiosTokenIdx4; //For single decoding mode
-    int **mBlockEnergyRatiosTokenIdx4Array; //For multiple decoding mode
+  float** mBlockSpecMag;
 
-    int *mTokenRepetitions;
-    //float *mLastBlockTokenEnergy;
+  // For Statistics (Confidence)
+  sTokenProbs* mBlockTokenStatistics;        // For single decoding mode
+  sTokenProbs** mBlockTokenStatisticsArray;  // For multiple decoding mode
 
-    int mEndStartTokenPosInBlockCircularBuffer;
-    double mAccumulatedDecodingFrames;
-    
-    int mMessageLength;
-    ReedSolomon *mReedSolomon;
-    std::vector<int> mDecodedValues;
-    int *mDecodedValuesOrig; //For reed solomon statistics
+  int* mBlockEnergyRatiosTokenIdx;         // For single decoding mode
+  int** mBlockEnergyRatiosTokenIdx1Array;  // For multiple decoding mode
+  int* mBlockEnergyStdTokenIdx;
+  int* mBlockEnergyDiffTokenIdx;
 
-    std::vector<float> mSumPerFrame;
+  int* mBlockEnergyRatiosTokenIdx2;        // For single decoding mode
+  int** mBlockEnergyRatiosTokenIdx2Array;  // For multiple decoding mode
+  int* mBlockEnergyStdTokenIdx2;
+  int* mBlockEnergyDiffTokenIdx2;
 
-    float mConfidenceEnergyRatios;
-    float mConfidenceRepetitions;
-    float mConfidenceCorrection;
-    float mConfidence;
+  int* mBlockEnergyRatiosTokenIdx3;        // For single decoding mode
+  int** mBlockEnergyRatiosTokenIdx3Array;  // For multiple decoding mode
 
-    float mReceivedBeepsVolume;
+  int* mBlockEnergyRatiosTokenIdx4;        // For single decoding mode
+  int** mBlockEnergyRatiosTokenIdx4Array;  // For multiple decoding mode
 
-  };
-}
+  int* mTokenRepetitions;
+  // float *mLastBlockTokenEnergy;
 
-#endif //__DECODER__
+  int mEndStartTokenPosInBlockCircularBuffer;
+  double mAccumulatedDecodingFrames;
+
+  int mMessageLength;
+  ReedSolomon* mReedSolomon;
+  std::vector<int> mDecodedValues;
+  int* mDecodedValuesOrig;  // For reed solomon statistics
+
+  std::vector<float> mSumPerFrame;
+
+  float mConfidenceEnergyRatios;
+  float mConfidenceRepetitions;
+  float mConfidenceCorrection;
+  float mConfidence;
+
+  float mReceivedBeepsVolume;
+
+  const BeepingConfig& m_config;
+};
+}  // namespace BEEPING
+
+#endif  //__DECODER__

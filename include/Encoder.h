@@ -1,42 +1,46 @@
 #ifndef __ENCODER__
 #define __ENCODER__
 
-namespace BEEPING
-{
-  class ReedSolomon;
+#include <BeepingConfig.h>
 
-  class Encoder
-  {
-  public:
-    Encoder(float samplingRate, int buffsize, int windowSize, int numTokens, int numTones);
-    ~Encoder(void);
+namespace BEEPING {
+class ReedSolomon;
 
-    int SetAudioSignature(int samplesSize, const float *samplesBuffer);
+class Encoder {
+ public:
+  Encoder(const BeepingConfig& config, float samplingRate, int buffsize,
+          int windowSize, int numTokens, int numTones);
+  virtual ~Encoder(void);
 
-    ReedSolomon *mReedSolomon;
-    virtual int EncodeDataToAudioBuffer(const char *stringToEncode, int type, int size, const char *melodyString, int melodySize);
-    int GetEncodedAudioBuffer(float *audioBuffer);
-    int ResetEncodedAudioBuffer();
-        
-    //float fastSin(float x);
+  int SetAudioSignature(int samplesSize, const float* samplesBuffer);
 
-    int mnAudioSignatureSamples;
-    float *mAudioSignature;
+  ReedSolomon* mReedSolomon;
+  virtual int EncodeDataToAudioBuffer(const char* stringToEncode, int type,
+                                      int size, const char* melodyString,
+                                      int melodySize);
+  int GetEncodedAudioBuffer(float* audioBuffer);
+  int ResetEncodedAudioBuffer();
 
-    float *mAudioBufferEncodedString;
+  // float fastSin(float x);
 
-    int mNumTokens;
-    int mNumTones;
+  int mnAudioSignatureSamples;
+  float* mAudioSignature;
 
-    float mSampleRate;
-    int mReadIndexEncodedAudioBuffer;
-    int mNumMaxSamplesEncodedString;
-    int mNumSamplesEncodedString;
-    int mBufferSize;
+  float* mAudioBufferEncodedString;
 
-    int mWindowSize;
+  BeepingConfig m_config;
 
-  };
-}
+  int mNumTokens;
+  int mNumTones;
 
-#endif //__ENCODER__
+  float mSampleRate;
+  int mReadIndexEncodedAudioBuffer;
+  int mNumMaxSamplesEncodedString;
+  int mNumSamplesEncodedString;
+  int mBufferSize;
+
+  int mWindowSize;
+};
+}  // namespace BEEPING
+
+#endif  //__ENCODER__
