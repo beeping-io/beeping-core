@@ -10,7 +10,7 @@ class BeepingCoreConan(ConanFile):
     description = "C++20 library for encoding and decoding data over sound"
     settings = "os", "compiler", "build_type", "arch"
 
-    requires = ()
+    requires = ("spdlog/1.15.3",)
 
     generators = "CMakeDeps", "CMakeToolchain"
 
