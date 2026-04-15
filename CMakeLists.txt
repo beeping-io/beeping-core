@@ -21,15 +21,36 @@ option(BEEPING_ENABLE_UBSAN "Build with UndefinedBehaviorSanitizer" OFF)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(Sanitizers)
 
-# --- spdlog (header-only with bundled fmt) ---
+# --- spdlog (dual-mode: external via find_package, fallback to FetchContent) ---
+#
+# BEEPING_USE_EXTERNAL_SPDLOG=ON (auto-ON when built via Conan/package manager):
+#   resolves spdlog via find_package(). Required by ConanCenter and distro
+#   packaging (no network fetch during build).
+# OFF (default for standalone dev): FetchContent clones spdlog.
+option(BEEPING_USE_EXTERNAL_SPDLOG
+  "Resolve spdlog via find_package() instead of FetchContent"
+  OFF)
+
+# Auto-enable when a Conan toolchain is active
+if(DEFINED CMAKE_TOOLCHAIN_FILE AND
+   CMAKE_TOOLCHAIN_FILE MATCHES "conan_toolchain\\.cmake$")
+  set(BEEPING_USE_EXTERNAL_SPDLOG ON CACHE BOOL "" FORCE)
+endif()
+
 include(FetchContent)
-FetchContent_Declare(
-  spdlog
-  GIT_REPOSITORY https://github.com/gabime/spdlog.git
-  GIT_TAG        v1.15.2
-  GIT_SHALLOW    TRUE
-)
-FetchContent_Populate(spdlog)
+if(BEEPING_USE_EXTERNAL_SPDLOG)
+  find_package(spdlog REQUIRED)
+  set(BEEPING_SPDLOG_INCLUDE_DIR "")  # find_package sets the target includes
+else()
+  FetchContent_Declare(
+    spdlog
+    GIT_REPOSITORY https://github.com/gabime/spdlog.git
+    GIT_TAG        v1.15.2
+    GIT_SHALLOW    TRUE
+  )
+  FetchContent_Populate(spdlog)
+  set(BEEPING_SPDLOG_INCLUDE_DIR "${spdlog_SOURCE_DIR}/include")
+endif()
 
 # --- Library sources ---
 
@@ -57,11 +78,14 @@ target_include_directories(BeepingCore PUBLIC
 )
 
 target_compile_features(BeepingCore PUBLIC cxx_std_20)
-# spdlog header-only: just need includes + SPDLOG_HEADER_ONLY define
-target_include_directories(BeepingCore PRIVATE
-  ${spdlog_SOURCE_DIR}/include
-)
-target_compile_definitions(BeepingCore PRIVATE SPDLOG_HEADER_ONLY)
+
+# spdlog: link via imported target if external, else inject header path
+if(BEEPING_USE_EXTERNAL_SPDLOG)
+  target_link_libraries(BeepingCore PRIVATE spdlog::spdlog)
+else()
+  target_include_directories(BeepingCore PRIVATE ${BEEPING_SPDLOG_INCLUDE_DIR})
+  target_compile_definitions(BeepingCore PRIVATE SPDLOG_HEADER_ONLY)
+endif()
 
 if(BEEPING_ENABLE_TSAN)
   beeping_enable_tsan(BeepingCore)
