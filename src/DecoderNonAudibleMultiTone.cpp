@@ -636,10 +636,14 @@ int DecoderNonAudibleMultiTone::ComputeStats() {
         evalToneBin += m_config.nBinsOffsetForNonAudibleMultiTone * 2;
       }
 
+      // Defensive clamp: at low sample rates the bin may drift past Nyquist
+      const int specSize = mSpectralAnalysis->mSpecSize;
       for (int n = 0; n < mSizeTokenBinAnal; n++) {
+        int bin = evalToneBin - mBinWidth + n;
+        if (bin < 0) bin = 0;
+        if (bin >= specSize) bin = specSize - 1;
         mEvalToneMags[n] = mBlockSpecMag[(mReadPosInBlockCircularBuffer + t) %
-                                         mSizeBlockCircularBuffer]
-                                        [evalToneBin - mBinWidth + n];
+                                         mSizeBlockCircularBuffer][bin];
       }
 
       double sum = Globals::sum(mEvalToneMags, mSizeTokenBinAnal);

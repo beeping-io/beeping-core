@@ -72,6 +72,13 @@ int EncoderAudibleMultiTone::EncodeDataToAudioBuffer(const char* stringToEncode,
   //  __android_log_print(ANDROID_LOG_INFO, "BeepingCoreLibInfo", "Added
   //  digits");
 
+  // Pad the payload with zeros up to numWordTokens to avoid OOB when
+  // the user passes a shorter string.
+  while (static_cast<int>(digits.size()) <
+         Globals::numFrontDoorTokens + Globals::numWordTokens) {
+    digits.push_back(0);
+  }
+
   // Add check digit
   int checkDigit = 0;
   for (int i = Globals::numFrontDoorTokens;
