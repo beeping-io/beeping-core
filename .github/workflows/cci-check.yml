@@ -1,0 +1,65 @@
+name: ConanCenter PR check
+
+on:
+  schedule:
+    - cron: '0 8 * * *'  # daily at 08:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  check:
+    name: Check CCI PR status
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PR and notify if changed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CCI_PR: "29997"
+        run: |
+          set -euo pipefail
+
+          # Fetch PR state
+          PR_JSON=$(gh pr view "$CCI_PR" \
+            --repo conan-io/conan-center-index \
+            --json state,title,updatedAt,comments,reviews \
+            --jq '{
+              state: .state,
+              title: .title,
+              updatedAt: .updatedAt,
+              commentCount: (.comments | length),
+              reviewCount: (.reviews | length)
+            }')
+
+          STATE=$(echo "$PR_JSON" | jq -r '.state')
+          UPDATED=$(echo "$PR_JSON" | jq -r '.updatedAt')
+          COMMENTS=$(echo "$PR_JSON" | jq -r '.commentCount')
+          REVIEWS=$(echo "$PR_JSON" | jq -r '.reviewCount')
+
+          echo "## ConanCenter PR #$CCI_PR status" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| State | $STATE |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Last updated | $UPDATED |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Comments | $COMMENTS |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Reviews | $REVIEWS |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          # Calculate hours since last update
+          UPDATED_TS=$(date -d "$UPDATED" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%SZ" "$UPDATED" +%s 2>/dev/null || echo 0)
+          NOW_TS=$(date +%s)
+          HOURS_AGO=$(( (NOW_TS - UPDATED_TS) / 3600 ))
+
+          if [ "$STATE" = "MERGED" ]; then
+            echo "🎉 **PR MERGED!** ConanCenter recipe is live." >> "$GITHUB_STEP_SUMMARY"
+            echo "→ Run: conan search beeping-core -r=conancenter" >> "$GITHUB_STEP_SUMMARY"
+            echo "→ TODO: update docs/conan.md, add badge to README, close BEE-30" >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$STATE" = "CLOSED" ]; then
+            echo "❌ **PR CLOSED** without merge. Check feedback and reopen." >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$HOURS_AGO" -lt 24 ]; then
+            echo "🔔 **Activity in last 24h** — check for reviewer comments or CI results." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "😴 No activity in ${HOURS_AGO}h. Still waiting for CCI review." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "[View PR](https://github.com/conan-io/conan-center-index/pull/$CCI_PR)" >> "$GITHUB_STEP_SUMMARY"
