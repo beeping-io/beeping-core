@@ -26,10 +26,19 @@ void ensureBeepingLogger();
 
 }  // namespace BEEPING
 
-// Strip path to filename only
-#define BEEPING_FILENAME_                                                  \
-  (__builtin_strrchr(__FILE__, '/') ? __builtin_strrchr(__FILE__, '/') + 1 \
-                                    : __FILE__)
+// Strip path to filename only (cross-platform — handles both / and \).
+// Runtime strrchr is fine for debug logging; not on hot paths.
+namespace BEEPING {
+inline const char* beeping_filename(const char* path) noexcept {
+  const char* slash = nullptr;
+  for (const char* p = path; *p; ++p) {
+    if (*p == '/' || *p == '\\') slash = p;
+  }
+  return slash ? slash + 1 : path;
+}
+}  // namespace BEEPING
+
+#define BEEPING_FILENAME_ BEEPING::beeping_filename(__FILE__)
 
 #define BTRACE(fmt, ...)                                \
   do {                                                  \

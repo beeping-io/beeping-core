@@ -79,6 +79,14 @@ target_include_directories(BeepingCore PUBLIC
 
 target_compile_features(BeepingCore PUBLIC cxx_std_20)
 
+# MSVC-specific flags:
+# - /Zc:preprocessor: enables the conformant C++11+ preprocessor (required for __VA_OPT__)
+# - /utf-8: treat sources and execution character set as UTF-8
+# Both are PUBLIC because headers use __VA_OPT__ in macros (BeepingDebug.h).
+if(MSVC)
+  target_compile_options(BeepingCore PUBLIC /Zc:preprocessor /utf-8)
+endif()
+
 # spdlog: link via imported target if external, else inject header path
 if(BEEPING_USE_EXTERNAL_SPDLOG)
   target_link_libraries(BeepingCore PRIVATE spdlog::spdlog)
