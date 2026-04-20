@@ -33,6 +33,7 @@ cd "$REPO_ROOT"
 conan install . \
   --build=missing \
   --lockfile=conan.lock \
+  -of "build/$BUILD_TYPE" \
   -pr:h="$PROFILE" \
   -pr:b="$PROFILE" \
   -s build_type="$BUILD_TYPE"
