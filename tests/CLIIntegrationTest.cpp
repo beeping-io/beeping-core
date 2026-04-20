@@ -97,8 +97,17 @@ std::vector<float> encode_to_samples(int mode, float sample_rate,
 }
 
 std::pair<int, std::string> run_cli(const std::string& args) {
+  // On Windows, `cmd.exe /c` strips the outermost quotes when the command
+  // starts with `"` and ends with `"`, which breaks commands that have both
+  // a quoted binary path AND a quoted argument. Wrap in an extra pair of
+  // quotes to survive that strip.
+#ifdef _WIN32
+  std::string full = "\"\"" + std::string(BEEPING_CLI_BINARY) + "\" " + args +
+                     " 2>&1\"";
+#else
   std::string full = "\"" + std::string(BEEPING_CLI_BINARY) + "\" " + args +
                      " 2>&1";
+#endif
   FILE* pipe = POPEN(full.c_str(), "r");
   REQUIRE(pipe != nullptr);
   std::array<char, 256> buf{};
