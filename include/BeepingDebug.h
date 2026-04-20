@@ -32,7 +32,9 @@ namespace BEEPING {
 inline const char* beeping_filename(const char* path) noexcept {
   const char* slash = nullptr;
   for (const char* p = path; *p; ++p) {
-    if (*p == '/' || *p == '\\') slash = p;
+    if (*p == '/' || *p == '\\') {
+      slash = p;
+    }
   }
   return slash ? slash + 1 : path;
 }
