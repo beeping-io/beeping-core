@@ -14,6 +14,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(BUILD_TESTING "Build tests" ON)
 option(BUILD_SHARED_LIBS "Build shared library" OFF)
+option(BEEPING_BUILD_CLI "Build the `beeping-core` CLI binary" ON)
 option(BEEPING_ENABLE_TSAN "Build with ThreadSanitizer (Clang/GCC only)" OFF)
 option(BEEPING_ENABLE_ASAN "Build with AddressSanitizer" OFF)
 option(BEEPING_ENABLE_UBSAN "Build with UndefinedBehaviorSanitizer" OFF)
@@ -155,16 +156,27 @@ FetchContent_MakeAvailable(Catch2)
 if(BUILD_TESTING)
   enable_testing()
 
-  add_executable(BeepingCoreTests
+  set(BEEPING_TEST_SOURCES
     tests/UnitTests.cpp
     tests/RoundTripTests.cpp
     tests/ConcurrencyTests.cpp
   )
+  if(BEEPING_BUILD_CLI)
+    list(APPEND BEEPING_TEST_SOURCES tests/CLIIntegrationTest.cpp)
+  endif()
+
+  add_executable(BeepingCoreTests ${BEEPING_TEST_SOURCES})
   target_link_libraries(BeepingCoreTests PRIVATE BeepingCore Catch2::Catch2WithMain)
   target_include_directories(BeepingCoreTests PRIVATE
     ${spdlog_SOURCE_DIR}/include
   )
   target_compile_definitions(BeepingCoreTests PRIVATE SPDLOG_HEADER_ONLY)
+  if(BEEPING_BUILD_CLI)
+    add_dependencies(BeepingCoreTests beeping_core_cli)
+    target_compile_definitions(BeepingCoreTests PRIVATE
+      BEEPING_CLI_BINARY="$<TARGET_FILE:beeping_core_cli>"
+    )
+  endif()
   if(NOT WIN32)
     target_link_libraries(BeepingCoreTests PRIVATE pthread)
   endif()
@@ -183,6 +195,12 @@ if(BUILD_TESTING)
 endif()
 
 # --- Benchmarks (Google Benchmark) ---
+
+# --- CLI binary ---
+
+if(BEEPING_BUILD_CLI)
+  add_subdirectory(cli)
+endif()
 
 option(BEEPING_BUILD_BENCHMARKS "Build performance benchmarks" OFF)
 
