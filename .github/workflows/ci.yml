@@ -62,14 +62,32 @@ jobs:
       - name: Verify lockfile is unchanged
         run: git diff --exit-code conan.lock
 
-      - name: Configure
+      - name: Configure (Unix)
+        if: runner.os != 'Windows'
         run: cmake --preset ci
 
-      - name: Build
+      - name: Build (Unix)
+        if: runner.os != 'Windows'
         run: cmake --build --preset ci
 
-      - name: Test
+      - name: Test (Unix)
+        if: runner.os != 'Windows'
         run: ctest --preset ci
+
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        run: cmake --preset conan-default
+        shell: pwsh
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        run: cmake --build --preset conan-debug
+        shell: pwsh
+
+      - name: Test (Windows)
+        if: runner.os == 'Windows'
+        run: ctest --preset conan-debug --output-on-failure
+        shell: pwsh
 
   lint:
     name: Lint

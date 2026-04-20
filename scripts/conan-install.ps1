@@ -41,7 +41,6 @@ try {
     conan install . `
         --build=missing `
         --lockfile=conan.lock `
-        -of "build/$BuildType" `
         "-pr:h=$Profile" `
         "-pr:b=$Profile" `
         "-s" "build_type=$BuildType"
