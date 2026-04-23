@@ -19,6 +19,19 @@ C++20 library for encoding and decoding data over sound (Data Over Sound).
 [![Static Analysis](https://github.com/beeping-io/beeping-core/actions/workflows/static-analysis.yml/badge.svg)](https://github.com/beeping-io/beeping-core/actions/workflows/static-analysis.yml)
 [![Docs](https://github.com/beeping-io/beeping-core/actions/workflows/docs.yml/badge.svg)](https://core-docs.beeping.io)
 
+<!-- Platform validation status -->
+![macOS](https://img.shields.io/badge/🍎_macOS-validated-brightgreen)
+![Linux](https://img.shields.io/badge/🐧_Linux-coming_soon-lightgrey)
+![Windows](https://img.shields.io/badge/🪟_Windows-coming_soon-lightgrey)
+![WASM](https://img.shields.io/badge/🌐_WASM-coming_soon-lightgrey)
+![iOS](https://img.shields.io/badge/📱_iOS-Phase_9-lightgrey)
+![Android](https://img.shields.io/badge/🤖_Android-Phase_8-lightgrey)
+
+> **Cross-platform strategy**: each OS is validated end-to-end (download
+> tarball → run CLI → round-trip test) before being promoted to the release.
+> "Validated" = we've actually used it on that platform and it works.
+> See [docs/INSTALL.md](docs/INSTALL.md) for installation per platform.
+
 ## Requirements
 
 - C++20 compiler (Apple Clang 15+, GCC 13+, Clang 16+)
