@@ -83,7 +83,11 @@ jobs:
   # ---------------------------------------------------------------------------
   linux-amd64:
     name: Linux amd64
-    runs-on: ubuntu-latest
+    # ubuntu-22.04 = glibc 2.35 (baseline). Forward-compatible with Ubuntu
+    # 22.04+, Debian 12+, Fedora 41+, Arch (all have glibc >= 2.35). If we
+    # built on ubuntu-latest (24.04, glibc 2.39) the binary would fail to
+    # load on older distros — discovered in BEE-1729 first smoke matrix run.
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -97,6 +101,7 @@ jobs:
             -DBUILD_SHARED_LIBS=OFF \
             -DBUILD_TESTING=OFF \
             -DBEEPING_BUILD_CLI=ON \
+            -DCMAKE_EXE_LINKER_FLAGS="-static-libgcc -static-libstdc++" \
             -DCMAKE_INSTALL_PREFIX=install
 
       - name: Build
