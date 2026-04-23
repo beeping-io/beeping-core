@@ -8,7 +8,7 @@
 |---|---|---|
 | 🍎 macOS (universal arm64 + x86_64) | ✅ Validated | v0.1.0 |
 | 🐧 Linux amd64 (glibc — Ubuntu 22+/24+, Debian 12+, Fedora 41+, Arch) | ✅ Validated | v0.2.0 |
-| 🪟 Windows (x64) | ⏳ Coming | — |
+| 🪟 Windows 11 (x64) | ✅ Validated | v0.3.0 |
 | 🌐 WASM (browser) | ⏳ Coming | — |
 | 🪟 Windows ARM64 | ⏳ Coming | — |
 | 🥧 Raspberry Pi / Linux ARM64 | ⏳ Coming | — |
@@ -107,6 +107,48 @@ tar --zstd -xf beeping-core-linux-amd64.tar.zst
 ### Not supported: Alpine / musl
 
 Alpine Linux uses musl libc, not glibc — the binary won't run there. If demand surfaces, a separate `beeping-core-linux-amd64-musl.tar.zst` variant will be added in its own task.
+
+## 🪟 Windows (x64)
+
+Validated end-to-end on **Windows 11**. Built with MSVC + **static CRT** (`/MT`) — no VC++ redistributable required. Should also run on Windows 10 1809+ but officially validated on Windows 11 only.
+
+### Download
+
+Replace `v0.3.0` with the latest release tag:
+
+```powershell
+$tag = "v0.3.0"
+Invoke-WebRequest -Uri "https://github.com/beeping-io/beeping-core/releases/download/$tag/beeping-core-windows-x64.zip" -OutFile beeping-core-windows-x64.zip
+Invoke-WebRequest -Uri "https://github.com/beeping-io/beeping-core/releases/download/$tag/SHA256SUMS.txt" -OutFile SHA256SUMS.txt
+```
+
+### Verify
+
+```powershell
+$expected = (Get-Content SHA256SUMS.txt | Select-String "beeping-core-windows-x64.zip").ToString().Split(" ")[0]
+$actual = (Get-FileHash beeping-core-windows-x64.zip -Algorithm SHA256).Hash.ToLower()
+if ($expected -eq $actual) { Write-Host "✅ OK" } else { Write-Error "❌ Mismatch" }
+```
+
+### Extract
+
+```powershell
+Expand-Archive -Path .\beeping-core-windows-x64.zip -DestinationPath beeping-core
+```
+
+### Run the CLI
+
+```powershell
+.\beeping-core\bin\beeping-core.exe --help
+.\beeping-core\bin\beeping-core.exe --version
+.\beeping-core\bin\beeping-core.exe decode path\to\sound.wav
+```
+
+If Windows Defender SmartScreen warns: right-click the file → Properties → check "Unblock" at the bottom → OK. This is because the binary isn't code-signed yet (Authenticode signing will come in a later phase).
+
+### Windows ARM64
+
+Not yet supported. Planned as a separate release (BEE-1732). Runs on x64 Windows via emulation in the meantime.
 
 ## Other platforms
 
