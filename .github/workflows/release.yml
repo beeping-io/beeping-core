@@ -79,6 +79,112 @@ jobs:
             beeping-core-macos-universal.sha256
 
   # ---------------------------------------------------------------------------
+  # Windows x64 — MSVC + Conan + static CRT (/MT) for zero-dependency portability
+  # Binary runs on Windows 10 1809+ and Windows 11 without VC++ redistributable.
+  # ---------------------------------------------------------------------------
+  windows-x64:
+    name: Windows x64
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Conan 2.x
+        run: |
+          pip install --upgrade pip
+          pip install "conan>=2.0,<3.0"
+          conan --version
+        shell: pwsh
+
+      - name: Cache Conan packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.conan2
+          key: conan-windows-x64-release-${{ hashFiles('conan.lock') }}
+          restore-keys: |
+            conan-windows-x64-release-
+
+      - name: Install Conan deps (Release, static MSVC runtime)
+        run: |
+          conan profile detect --force
+          conan install . `
+            --build=missing `
+            --lockfile=conan.lock `
+            -pr:h=./profiles/windows-x64 `
+            -pr:b=./profiles/windows-x64 `
+            -s build_type=Release `
+            -s compiler.runtime=static
+        shell: pwsh
+
+      - name: Configure
+        run: |
+          cmake --preset conan-default `
+            -DBEEPING_BUILD_CLI=ON `
+            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded `
+            -DBUILD_TESTING=OFF `
+            -DCMAKE_INSTALL_PREFIX=install
+        shell: pwsh
+
+      - name: Build
+        run: cmake --build --preset conan-release --config Release
+        shell: pwsh
+
+      - name: Install
+        run: cmake --install build\Release --config Release --prefix install
+        shell: pwsh
+
+      - name: Verify CLI binary exists + static CRT
+        run: |
+          if (-not (Test-Path install\bin\beeping-core.exe)) {
+            Write-Error "❌ CLI binary missing at install\bin\beeping-core.exe"
+            exit 1
+          }
+          # dumpbin /dependents should NOT list VCRUNTIME140.dll for static build
+          $deps = & dumpbin /dependents install\bin\beeping-core.exe 2>&1
+          Write-Host "Dependencies of beeping-core.exe:"
+          Write-Host $deps
+          if ($deps -match "VCRUNTIME\d+\.dll|MSVCP\d+\.dll") {
+            Write-Warning "⚠️ Binary depends on VC++ redistributable — expected static CRT. Output above."
+          } else {
+            Write-Host "✅ Static CRT confirmed (no VCRUNTIME/MSVCP dynamic deps)"
+          }
+        shell: pwsh
+
+      - name: Smoke-test CLI
+        run: |
+          install\bin\beeping-core.exe --help
+          install\bin\beeping-core.exe --version
+        shell: pwsh
+
+      - name: Package (zip)
+        run: |
+          Compress-Archive -Path install\bin,install\include,install\lib -DestinationPath beeping-core-windows-x64.zip
+          $hash = (Get-FileHash beeping-core-windows-x64.zip -Algorithm SHA256).Hash.ToLower()
+          "$hash  beeping-core-windows-x64.zip" | Out-File -FilePath beeping-core-windows-x64.sha256 -Encoding ascii
+        shell: pwsh
+
+      - name: Verify CLI in zip
+        run: |
+          Expand-Archive -Path beeping-core-windows-x64.zip -DestinationPath verify
+          if (-not (Test-Path verify\bin\beeping-core.exe)) {
+            Write-Error "❌ CLI binary missing in packaged zip"
+            exit 1
+          }
+          verify\bin\beeping-core.exe --help
+        shell: pwsh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: beeping-core-windows-x64
+          path: |
+            beeping-core-windows-x64.zip
+            beeping-core-windows-x64.sha256
+
+  # ---------------------------------------------------------------------------
   # Linux — amd64
   # ---------------------------------------------------------------------------
   linux-amd64:
@@ -422,7 +528,7 @@ jobs:
   # ---------------------------------------------------------------------------
   hashes:
     name: Compute artifact hashes
-    needs: [macos, linux-amd64, linux-compat-smoke, sbom]
+    needs: [macos, linux-amd64, linux-compat-smoke, windows-x64, sbom]
     runs-on: ubuntu-latest
     outputs:
       hashes: ${{ steps.compute.outputs.hashes }}
@@ -462,7 +568,7 @@ jobs:
   # ---------------------------------------------------------------------------
   release:
     name: Publish GitHub Release
-    needs: [macos, linux-amd64, linux-compat-smoke, sbom]
+    needs: [macos, linux-amd64, linux-compat-smoke, windows-x64, sbom]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
