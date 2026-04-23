@@ -83,8 +83,6 @@ jobs:
   # ---------------------------------------------------------------------------
   linux-amd64:
     name: Linux amd64
-    # BEE-1729 — re-enable when Ubuntu + Linux Docker compat matrix validated E2E
-    if: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -98,6 +96,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_SHARED_LIBS=OFF \
             -DBUILD_TESTING=OFF \
+            -DBEEPING_BUILD_CLI=ON \
             -DCMAKE_INSTALL_PREFIX=install
 
       - name: Build
@@ -106,6 +105,17 @@ jobs:
       - name: Install
         run: cmake --install build
 
+      - name: Verify CLI binary
+        run: |
+          test -x install/bin/beeping-core || { echo "❌ CLI binary missing at install/bin/beeping-core"; exit 1; }
+          file install/bin/beeping-core
+          ldd install/bin/beeping-core || true
+
+      - name: Smoke-test CLI
+        run: |
+          install/bin/beeping-core --help
+          install/bin/beeping-core --version
+
       - name: Package
         run: |
           cd install
@@ -113,12 +123,63 @@ jobs:
           cd ..
           sha256sum beeping-core-linux-amd64.tar.zst > beeping-core-linux-amd64.sha256
 
+      - name: Verify CLI in tarball
+        run: |
+          mkdir verify
+          tar --zstd -xf beeping-core-linux-amd64.tar.zst -C verify
+          test -x verify/bin/beeping-core || { echo "❌ CLI binary missing in packaged tarball"; exit 1; }
+          verify/bin/beeping-core --help
+
       - uses: actions/upload-artifact@v4
         with:
           name: beeping-core-linux-amd64
           path: |
             beeping-core-linux-amd64.tar.zst
             beeping-core-linux-amd64.sha256
+
+  # ---------------------------------------------------------------------------
+  # Linux compat smoke matrix — verify the linux-amd64 binary actually runs
+  # on multiple glibc distros before allowing the release to publish.
+  # Alpine (musl) is intentionally excluded: BEE-1729 ships glibc-only.
+  # If demand for musl arises, a separate `beeping-core-linux-amd64-musl.tar.zst`
+  # variant will be added in its own task.
+  # ---------------------------------------------------------------------------
+  linux-compat-smoke:
+    name: Linux compat (${{ matrix.image }})
+    needs: [linux-amd64]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - ubuntu:22.04
+          - ubuntu:24.04
+          - debian:12
+          - fedora:41
+          - archlinux:latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: beeping-core-linux-amd64
+          path: artifact
+
+      - name: Smoke test binary in ${{ matrix.image }}
+        run: |
+          docker run --rm \
+            -v "$PWD/artifact:/release:ro" \
+            ${{ matrix.image }} \
+            sh -c "
+              set -e
+              # Install zstd if not present (Debian / Ubuntu may need it; Fedora/Arch usually have it)
+              command -v zstd >/dev/null 2>&1 || \
+                (command -v apt-get >/dev/null 2>&1 && apt-get update -qq && apt-get install -y -qq zstd) || \
+                (command -v dnf >/dev/null 2>&1 && dnf install -y -q zstd) || \
+                (command -v pacman >/dev/null 2>&1 && pacman -Sy --noconfirm zstd)
+              tar --zstd -xf /release/beeping-core-linux-amd64.tar.zst -C /opt
+              /opt/bin/beeping-core --help
+              /opt/bin/beeping-core --version
+              echo '✅ ${{ matrix.image }} OK'
+            "
 
   # ---------------------------------------------------------------------------
   # Linux — arm64 (cross-compile)
@@ -356,7 +417,7 @@ jobs:
   # ---------------------------------------------------------------------------
   hashes:
     name: Compute artifact hashes
-    needs: [macos, sbom]
+    needs: [macos, linux-amd64, linux-compat-smoke, sbom]
     runs-on: ubuntu-latest
     outputs:
       hashes: ${{ steps.compute.outputs.hashes }}
@@ -396,7 +457,7 @@ jobs:
   # ---------------------------------------------------------------------------
   release:
     name: Publish GitHub Release
-    needs: [macos, sbom]
+    needs: [macos, linux-amd64, linux-compat-smoke, sbom]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
