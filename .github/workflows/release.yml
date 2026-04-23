@@ -122,11 +122,12 @@ jobs:
 
       - name: Configure
         run: |
+          $installDir = Join-Path $env:GITHUB_WORKSPACE "install"
           cmake --preset conan-default `
             -DBEEPING_BUILD_CLI=ON `
             -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded `
             -DBUILD_TESTING=OFF `
-            -DCMAKE_INSTALL_PREFIX=install
+            "-DCMAKE_INSTALL_PREFIX=$installDir"
         shell: pwsh
 
       - name: Build
@@ -134,17 +135,24 @@ jobs:
         shell: pwsh
 
       - name: Install
-        run: cmake --install build --config Release --prefix install
+        run: |
+          $installDir = Join-Path $env:GITHUB_WORKSPACE "install"
+          cmake --install build --config Release --prefix "$installDir"
+          Write-Host "Install tree:"
+          Get-ChildItem -Recurse "$installDir" | Select-Object FullName, Length
         shell: pwsh
 
       - name: Verify CLI binary exists + static CRT
         run: |
-          if (-not (Test-Path install\bin\beeping-core.exe)) {
-            Write-Error "❌ CLI binary missing at install\bin\beeping-core.exe"
+          $exePath = Join-Path $env:GITHUB_WORKSPACE "install\bin\beeping-core.exe"
+          Write-Host "Checking: $exePath"
+          if (-not (Test-Path -LiteralPath $exePath)) {
+            Write-Error "❌ CLI binary missing at $exePath"
             exit 1
           }
+          Write-Host "✅ Binary present at $exePath"
           # dumpbin /dependents should NOT list VCRUNTIME140.dll for static build
-          $deps = & dumpbin /dependents install\bin\beeping-core.exe 2>&1
+          $deps = & dumpbin /dependents "$exePath" 2>&1
           Write-Host "Dependencies of beeping-core.exe:"
           Write-Host $deps
           if ($deps -match "VCRUNTIME\d+\.dll|MSVCP\d+\.dll") {
@@ -156,25 +164,32 @@ jobs:
 
       - name: Smoke-test CLI
         run: |
-          install\bin\beeping-core.exe --help
-          install\bin\beeping-core.exe --version
+          $exePath = Join-Path $env:GITHUB_WORKSPACE "install\bin\beeping-core.exe"
+          & "$exePath" --help
+          & "$exePath" --version
         shell: pwsh
 
       - name: Package (zip)
         run: |
-          Compress-Archive -Path install\bin,install\include,install\lib -DestinationPath beeping-core-windows-x64.zip
-          $hash = (Get-FileHash beeping-core-windows-x64.zip -Algorithm SHA256).Hash.ToLower()
-          "$hash  beeping-core-windows-x64.zip" | Out-File -FilePath beeping-core-windows-x64.sha256 -Encoding ascii
+          $installDir = Join-Path $env:GITHUB_WORKSPACE "install"
+          $zipPath    = Join-Path $env:GITHUB_WORKSPACE "beeping-core-windows-x64.zip"
+          $shaPath    = Join-Path $env:GITHUB_WORKSPACE "beeping-core-windows-x64.sha256"
+          Compress-Archive -Path (Join-Path $installDir "bin"), (Join-Path $installDir "include"), (Join-Path $installDir "lib") -DestinationPath "$zipPath"
+          $hash = (Get-FileHash "$zipPath" -Algorithm SHA256).Hash.ToLower()
+          "$hash  beeping-core-windows-x64.zip" | Out-File -FilePath "$shaPath" -Encoding ascii
         shell: pwsh
 
       - name: Verify CLI in zip
         run: |
-          Expand-Archive -Path beeping-core-windows-x64.zip -DestinationPath verify
-          if (-not (Test-Path verify\bin\beeping-core.exe)) {
-            Write-Error "❌ CLI binary missing in packaged zip"
+          $zipPath    = Join-Path $env:GITHUB_WORKSPACE "beeping-core-windows-x64.zip"
+          $verifyDir  = Join-Path $env:GITHUB_WORKSPACE "verify"
+          Expand-Archive -Path "$zipPath" -DestinationPath "$verifyDir"
+          $verifyExe = Join-Path $verifyDir "bin\beeping-core.exe"
+          if (-not (Test-Path -LiteralPath $verifyExe)) {
+            Write-Error "❌ CLI binary missing in packaged zip at $verifyExe"
             exit 1
           }
-          verify\bin\beeping-core.exe --help
+          & "$verifyExe" --help
         shell: pwsh
 
       - uses: actions/upload-artifact@v4
