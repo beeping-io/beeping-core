@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest, windows-11-arm]
 
     steps:
       - uses: actions/checkout@v4
@@ -32,7 +32,8 @@ jobs:
           pip install "conan>=2.0,<3.0"
           conan --version
 
-      - name: Cache Conan packages
+      - name: Cache Conan packages (Unix)
+        if: runner.os != 'Windows'
         uses: actions/cache@v4
         with:
           path: ~/.conan2
@@ -40,20 +41,53 @@ jobs:
           restore-keys: |
             conan-${{ runner.os }}-
 
-      - name: Install Conan dependencies
+      - name: Cache Conan packages (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: ~\.conan2
+          key: conan-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('conan.lock', 'conanfile.py', 'profiles/*') }}
+          restore-keys: |
+            conan-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Install Conan dependencies (Unix)
+        if: runner.os != 'Windows'
         run: ./scripts/conan-install.sh Debug
+
+      - name: Install Conan dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: ./scripts/conan-install.ps1 Debug
+        shell: pwsh
 
       - name: Verify lockfile is unchanged
         run: git diff --exit-code conan.lock
 
-      - name: Configure
+      - name: Configure (Unix)
+        if: runner.os != 'Windows'
         run: cmake --preset ci
 
-      - name: Build
+      - name: Build (Unix)
+        if: runner.os != 'Windows'
         run: cmake --build --preset ci
 
-      - name: Test
+      - name: Test (Unix)
+        if: runner.os != 'Windows'
         run: ctest --preset ci
+
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        run: cmake --preset conan-default
+        shell: pwsh
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        run: cmake --build --preset conan-debug
+        shell: pwsh
+
+      - name: Test (Windows)
+        if: runner.os == 'Windows'
+        run: ctest --preset conan-debug --output-on-failure
+        shell: pwsh
 
   lint:
     name: Lint

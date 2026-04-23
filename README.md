@@ -19,6 +19,19 @@ C++20 library for encoding and decoding data over sound (Data Over Sound).
 [![Static Analysis](https://github.com/beeping-io/beeping-core/actions/workflows/static-analysis.yml/badge.svg)](https://github.com/beeping-io/beeping-core/actions/workflows/static-analysis.yml)
 [![Docs](https://github.com/beeping-io/beeping-core/actions/workflows/docs.yml/badge.svg)](https://core-docs.beeping.io)
 
+<!-- Platform validation status -->
+![macOS](https://img.shields.io/badge/🍎_macOS-validated-brightgreen)
+![Linux](https://img.shields.io/badge/🐧_Linux-coming_soon-lightgrey)
+![Windows](https://img.shields.io/badge/🪟_Windows-coming_soon-lightgrey)
+![WASM](https://img.shields.io/badge/🌐_WASM-coming_soon-lightgrey)
+![iOS](https://img.shields.io/badge/📱_iOS-Phase_9-lightgrey)
+![Android](https://img.shields.io/badge/🤖_Android-Phase_8-lightgrey)
+
+> **Cross-platform strategy**: each OS is validated end-to-end (download
+> tarball → run CLI → round-trip test) before being promoted to the release.
+> "Validated" = we've actually used it on that platform and it works.
+> See [docs/INSTALL.md](docs/INSTALL.md) for installation per platform.
+
 ## Requirements
 
 - C++20 compiler (Apple Clang 15+, GCC 13+, Clang 16+)
@@ -59,10 +72,42 @@ be run before `cmake --preset` for the matching build type.
 
 ### Conan profiles
 
-Project-managed profiles live in [`profiles/`](profiles/) (`macos`, `linux`).
-The install script auto-selects by `uname -s`. Pinning the profiles in-repo
-keeps CI and local builds bit-for-bit reproducible regardless of the host
-default profile.
+Project-managed profiles live in [`profiles/`](profiles/):
+`macos`, `linux`, `windows-x64`, `windows-arm64`.
+
+- On macOS/Linux the install script (`scripts/conan-install.sh`) picks the
+  profile by `uname -s`.
+- On Windows use `scripts/conan-install.ps1` (PowerShell), which picks
+  `windows-x64` or `windows-arm64` based on `$env:PROCESSOR_ARCHITECTURE`.
+
+Pinning the profiles in-repo keeps CI and local builds bit-for-bit
+reproducible regardless of the host default profile.
+
+## CLI — decode a WAV
+
+The build produces a `beeping-core` binary (at
+`build/Debug/cli/beeping-core`) that can decode a WAV file produced by
+the Beeping platform:
+
+```bash
+./build/Debug/cli/beeping-core version
+# BeepingCoreLib version 1.0.0 [...]
+
+./build/Debug/cli/beeping-core decode audio.wav
+# payload-string
+
+./build/Debug/cli/beeping-core decode -m 2 audio.wav   # force audible
+./build/Debug/cli/beeping-core decode -m 3 audio.wav   # force inaudible
+# default is -m 5 (try both)
+```
+
+Exit codes: `0` = decoded (payload on stdout), `1` = no beep found,
+`2` = bad input (missing file, unreadable WAV, etc.).
+
+Supports WAV PCM int16 (format 1) and IEEE float 32-bit (format 3),
+mono or stereo (downmixed to mono).
+
+Full docs: [`docs/cli.md`](docs/cli.md).
 
 ## Releases & verification
 
