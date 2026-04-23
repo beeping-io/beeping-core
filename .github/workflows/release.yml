@@ -134,7 +134,7 @@ jobs:
         shell: pwsh
 
       - name: Install
-        run: cmake --install build\Release --config Release --prefix install
+        run: cmake --install build --config Release --prefix install
         shell: pwsh
 
       - name: Verify CLI binary exists + static CRT
