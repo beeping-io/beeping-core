@@ -151,14 +151,35 @@ jobs:
             exit 1
           }
           Write-Host "✅ Binary present at $exePath"
-          # dumpbin /dependents should NOT list VCRUNTIME140.dll for static build
-          $deps = & dumpbin /dependents "$exePath" 2>&1
-          Write-Host "Dependencies of beeping-core.exe:"
-          Write-Host $deps
-          if ($deps -match "VCRUNTIME\d+\.dll|MSVCP\d+\.dll") {
-            Write-Warning "⚠️ Binary depends on VC++ redistributable — expected static CRT. Output above."
+
+          # Static-CRT diagnostic: dumpbin lives inside the MSVC dev shell,
+          # so try to locate it via vswhere and fall back to a warning if
+          # unavailable. The build flags already force static CRT; this is
+          # just belt-and-suspenders.
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $dumpbin = $null
+          if (Test-Path -LiteralPath $vswhere) {
+            $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+            if ($vsPath) {
+              $candidate = Get-ChildItem -Path "$vsPath\VC\Tools\MSVC" -Filter "dumpbin.exe" -Recurse -ErrorAction SilentlyContinue |
+                Where-Object { $_.FullName -match "Hostx64\\x64\\dumpbin.exe$" } |
+                Select-Object -First 1
+              if ($candidate) { $dumpbin = $candidate.FullName }
+            }
+          }
+
+          if ($dumpbin) {
+            Write-Host "Using dumpbin: $dumpbin"
+            $deps = & $dumpbin /dependents "$exePath" 2>&1
+            Write-Host "Dependencies of beeping-core.exe:"
+            Write-Host $deps
+            if ($deps -match "VCRUNTIME\d+\.dll|MSVCP\d+\.dll") {
+              Write-Warning "⚠️ Binary depends on VC++ redistributable — expected static CRT."
+            } else {
+              Write-Host "✅ Static CRT confirmed (no VCRUNTIME/MSVCP dynamic deps)"
+            }
           } else {
-            Write-Host "✅ Static CRT confirmed (no VCRUNTIME/MSVCP dynamic deps)"
+            Write-Warning "dumpbin not found on PATH or via vswhere — skipping static-CRT dependents check (build flags already enforce /MT)."
           }
         shell: pwsh
 
