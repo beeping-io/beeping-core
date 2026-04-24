@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>beeping-core — WASM decoder demo</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: system-ui, -apple-system, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+    h1 { margin-bottom: 0.25rem; }
+    .drop { border: 2px dashed #9aa; border-radius: 12px; padding: 3rem 1rem; text-align: center; color: #667; cursor: pointer; transition: all 0.15s; user-select: none; }
+    .drop:hover, .drop.over { border-color: #36c; background: rgba(51, 102, 204, 0.08); color: #222; }
+    .drop code { background: rgba(128,128,128,0.18); padding: 0.1em 0.35em; border-radius: 4px; }
+    pre { background: #0b0f1a; color: #8fe; padding: 1rem 1.25rem; border-radius: 8px; white-space: pre-wrap; word-break: break-word; min-height: 3em; margin-top: 1.25rem; }
+    footer { margin-top: 2.5rem; color: #888; font-size: 0.85rem; }
+    footer a { color: inherit; }
+  </style>
+</head>
+<body>
+  <h1>🔊 beeping-core WASM decoder</h1>
+  <p>Drop a <code>.wav</code> below. Decoding runs entirely in your browser — no network calls after the initial module load.</p>
+
+  <div id="drop" class="drop">
+    Drop a <code>.wav</code> file here, or click to choose
+  </div>
+  <input id="pick" type="file" accept=".wav,audio/wav,audio/wave,audio/x-wav" hidden>
+
+  <pre id="out">Waiting for a WAV…</pre>
+
+  <footer>
+    <p>
+      Module: <code>beeping-core.wasm</code> +
+      <a href="./beeping-core.js"><code>beeping-core.js</code></a>. Source:
+      <a href="https://github.com/beeping-io/beeping-core">beeping-io/beeping-core</a>.
+    </p>
+  </footer>
+
+  <script type="module">
+    import { decode } from "./beeping-core.js";
+
+    const drop = document.getElementById("drop");
+    const pick = document.getElementById("pick");
+    const out  = document.getElementById("out");
+
+    drop.addEventListener("click", () => pick.click());
+    drop.addEventListener("dragover",  e => { e.preventDefault(); drop.classList.add("over"); });
+    drop.addEventListener("dragleave", ()  => drop.classList.remove("over"));
+    drop.addEventListener("drop",      e => {
+      e.preventDefault();
+      drop.classList.remove("over");
+      handle(e.dataTransfer?.files?.[0]);
+    });
+    pick.addEventListener("change", () => handle(pick.files?.[0]));
+
+    async function handle(file) {
+      if (!file) return;
+      out.textContent = `Decoding ${file.name} (${(file.size / 1024).toFixed(1)} KB)…`;
+      try {
+        const t0 = performance.now();
+        const payload = await decode(await file.arrayBuffer());
+        const dt = (performance.now() - t0).toFixed(1);
+        out.textContent = payload
+          ? `✅ Decoded in ${dt} ms\n\n  payload: ${payload}`
+          : `❌ No beep detected (tried for ${dt} ms)`;
+      } catch (err) {
+        out.textContent = `❌ Error: ${err.message}`;
+      }
+    }
+  </script>
+</body>
+</html>

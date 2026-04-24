@@ -10,7 +10,7 @@
 | 🐧 Linux amd64 (glibc — Ubuntu 22+/24+, Debian 12+, Fedora 41+, Arch) | ✅ Validated | v0.2.0 |
 | 🪟 Windows 11 (x64) | ✅ Validated | v0.3.1 |
 | 🪟 Windows 11 (ARM64) | ✅ Validated | v0.4.0 |
-| 🌐 WASM (browser) | ⏳ Coming | — |
+| 🌐 WASM (browser + Node) | ✅ Validated | v0.5.0 |
 | 🥧 Raspberry Pi / Linux ARM64 | ⏳ Coming | — |
 | 📱 iOS XCFramework | ⏳ Phase 9 | — |
 | 🤖 Android NDK | ⏳ Phase 8 | — |
@@ -180,6 +180,55 @@ Expand-Archive -Path .\beeping-core-windows-arm64.zip -DestinationPath beeping-c
 ```
 
 If your ARM64 Windows is running an x64 build of `beeping-core` under Prism emulation, decoding still works but isn't native. Prefer the ARM64 build for best battery + performance.
+
+## 🌐 WASM (browser + Node.js)
+
+Decode WAVs in the browser or Node without any native binary. Ships as
+an ES module (`beeping-core.mjs` + `beeping-core.wasm` + a thin JS
+wrapper `beeping-core.js`) plus TypeScript definitions.
+
+### Download
+
+```bash
+TAG=v0.5.0
+curl -LO "https://github.com/beeping-io/beeping-core/releases/download/${TAG}/beeping-core-wasm.tar.zst"
+curl -LO "https://github.com/beeping-io/beeping-core/releases/download/${TAG}/SHA256SUMS.txt"
+shasum -a 256 -c SHA256SUMS.txt --ignore-missing
+tar --zstd -xf beeping-core-wasm.tar.zst
+```
+
+### Browser usage
+
+```js
+// 1. Copy wasm/ next to your app, served over HTTPS with
+//    Content-Type: application/wasm for the .wasm file.
+import { decode } from "./wasm/beeping-core.js";
+
+const file = document.querySelector("input[type=file]").files[0];
+const payload = await decode(await file.arrayBuffer());
+console.log(payload); // "h3l7m0000"
+```
+
+### Node.js usage
+
+```bash
+node wasm/smoke-test.mjs path/to/sound.wav h3l7m0000
+```
+
+Or programmatically:
+
+```js
+import { readFile } from "node:fs/promises";
+import { decode } from "./wasm/beeping-core.js";
+
+const buf = await readFile("sound.wav");
+const payload = await decode(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
+```
+
+### Demo
+
+Open `wasm/demo.html` over HTTPS (or a local static server) and drop a
+WAV onto the page. Full source is in the tarball.
 
 ## Other platforms
 
