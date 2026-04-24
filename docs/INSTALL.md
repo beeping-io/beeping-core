@@ -185,9 +185,10 @@ If your ARM64 Windows is running an x64 build of `beeping-core` under Prism emul
 
 Validated end-to-end on the GitHub-hosted **`ubuntu-22.04-arm`** runner and
 smoke-tested against Ubuntu 22.04/24.04, Debian 12 (== Raspberry Pi OS
-bookworm base), Fedora 41 and Arch — all arm64. Built against glibc 2.35 +
+bookworm base) and Fedora 41 — all arm64. Built against glibc 2.35 +
 `-static-libgcc -static-libstdc++`, so the binary runs on any arm64 Linux
-with glibc 2.35+.
+with glibc 2.35+. Arch Linux ARM is a separate community project; the
+binary should also run there but it isn't part of the smoke matrix.
 
 Supported hardware:
 

@@ -544,12 +544,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Arch Linux is x86_64-only upstream (Arch Linux ARM is a separate
+        # project with a different image) — omitted from this matrix. The
+        # four distros below cover every realistic Pi/arm64 deployment.
         image:
           - ubuntu:22.04
           - ubuntu:24.04
           - debian:12
           - fedora:41
-          - archlinux:latest
     steps:
       - uses: actions/download-artifact@v4
         with:
