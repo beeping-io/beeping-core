@@ -9,8 +9,8 @@
 | 🍎 macOS (universal arm64 + x86_64) | ✅ Validated | v0.1.0 |
 | 🐧 Linux amd64 (glibc — Ubuntu 22+/24+, Debian 12+, Fedora 41+, Arch) | ✅ Validated | v0.2.0 |
 | 🪟 Windows 11 (x64) | ✅ Validated | v0.3.1 |
+| 🪟 Windows 11 (ARM64) | ✅ Validated | v0.4.0 |
 | 🌐 WASM (browser) | ⏳ Coming | — |
-| 🪟 Windows ARM64 | ⏳ Coming | — |
 | 🥧 Raspberry Pi / Linux ARM64 | ⏳ Coming | — |
 | 📱 iOS XCFramework | ⏳ Phase 9 | — |
 | 🤖 Android NDK | ⏳ Phase 8 | — |
@@ -146,9 +146,40 @@ Expand-Archive -Path .\beeping-core-windows-x64.zip -DestinationPath beeping-cor
 
 If Windows Defender SmartScreen warns: right-click the file → Properties → check "Unblock" at the bottom → OK. This is because the binary isn't code-signed yet (Authenticode signing will come in a later phase).
 
-### Windows ARM64
+## 🪟 Windows (ARM64)
 
-Not yet supported. Planned as a separate release (BEE-1732). Runs on x64 Windows via emulation in the meantime.
+Validated end-to-end on **Windows 11 ARM64**. Built with MSVC ARM64 target + **static CRT** (`/MT`). Native ARM64 — no x64 emulation overhead.
+
+Target hardware: Surface Pro (ARM64), Copilot+ PCs (Snapdragon X Elite/Plus), Parallels/UTM running Windows 11 on Apple Silicon.
+
+### Download
+
+Replace `v0.4.0` with the latest release tag:
+
+```powershell
+$tag = "v0.4.0"
+Invoke-WebRequest -Uri "https://github.com/beeping-io/beeping-core/releases/download/$tag/beeping-core-windows-arm64.zip" -OutFile beeping-core-windows-arm64.zip
+Invoke-WebRequest -Uri "https://github.com/beeping-io/beeping-core/releases/download/$tag/SHA256SUMS.txt" -OutFile SHA256SUMS.txt
+```
+
+### Verify
+
+```powershell
+$expected = (Get-Content SHA256SUMS.txt | Select-String "beeping-core-windows-arm64.zip").ToString().Split(" ")[0]
+$actual = (Get-FileHash beeping-core-windows-arm64.zip -Algorithm SHA256).Hash.ToLower()
+if ($expected -eq $actual) { Write-Host "✅ OK" } else { Write-Error "❌ Mismatch" }
+```
+
+### Extract + run
+
+```powershell
+Expand-Archive -Path .\beeping-core-windows-arm64.zip -DestinationPath beeping-core
+.\beeping-core\bin\beeping-core.exe --help
+.\beeping-core\bin\beeping-core.exe --version
+.\beeping-core\bin\beeping-core.exe decode path\to\sound.wav
+```
+
+If your ARM64 Windows is running an x64 build of `beeping-core` under Prism emulation, decoding still works but isn't native. Prefer the ARM64 build for best battery + performance.
 
 ## Other platforms
 
