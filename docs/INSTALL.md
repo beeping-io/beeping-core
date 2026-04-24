@@ -11,7 +11,7 @@
 | 🪟 Windows 11 (x64) | ✅ Validated | v0.3.1 |
 | 🪟 Windows 11 (ARM64) | ✅ Validated | v0.4.0 |
 | 🌐 WASM (browser + Node) | ✅ Validated | v0.5.0 |
-| 🥧 Raspberry Pi / Linux ARM64 | ⏳ Coming | — |
+| 🥧 Linux arm64 / Raspberry Pi (Pi 4 / Pi 5 / Pi Zero 2 W) | ✅ Validated | v0.6.0 |
 | 📱 iOS XCFramework | ⏳ Phase 9 | — |
 | 🤖 Android NDK | ⏳ Phase 8 | — |
 | 🏔️ Alpine Linux / musl | ❌ Not supported (glibc-only build) | — |
@@ -180,6 +180,66 @@ Expand-Archive -Path .\beeping-core-windows-arm64.zip -DestinationPath beeping-c
 ```
 
 If your ARM64 Windows is running an x64 build of `beeping-core` under Prism emulation, decoding still works but isn't native. Prefer the ARM64 build for best battery + performance.
+
+## 🥧 Linux arm64 / Raspberry Pi
+
+Validated end-to-end on the GitHub-hosted **`ubuntu-22.04-arm`** runner and
+smoke-tested against Ubuntu 22.04/24.04, Debian 12 (== Raspberry Pi OS
+bookworm base), Fedora 41 and Arch — all arm64. Built against glibc 2.35 +
+`-static-libgcc -static-libstdc++`, so the binary runs on any arm64 Linux
+with glibc 2.35+.
+
+Supported hardware:
+
+| Model | Arch | OS | Status |
+|---|---|---|---|
+| Raspberry Pi 4 / 400 | BCM2711 (ARMv8-A) | Raspberry Pi OS 64-bit · Ubuntu arm64 | ✅ |
+| Raspberry Pi 5 | BCM2712 (ARMv8.2-A) | Raspberry Pi OS 64-bit · Ubuntu arm64 | ✅ |
+| Raspberry Pi Zero 2 W | BCM2710 (ARMv8-A) | Raspberry Pi OS 64-bit | ✅ |
+| Generic Linux arm64 (Ampere, AWS Graviton, Oracle Ampere, Jetson, Pine64, Rock Pi) | ARMv8+ | any glibc 2.35+ | ✅ |
+
+32-bit Raspberry Pi OS (armhf) is **not supported** — flash the 64-bit
+image from Raspberry Pi Imager.
+
+### Download
+
+```bash
+TAG=v0.6.0
+curl -LO "https://github.com/beeping-io/beeping-core/releases/download/${TAG}/beeping-core-linux-arm64.tar.zst"
+curl -LO "https://github.com/beeping-io/beeping-core/releases/download/${TAG}/SHA256SUMS.txt"
+```
+
+### Verify
+
+```bash
+sha256sum -c SHA256SUMS.txt --ignore-missing
+```
+
+Expected: `beeping-core-linux-arm64.tar.zst: OK`.
+
+### Extract
+
+```bash
+# Raspberry Pi OS / Debian: install zstd if needed
+sudo apt-get install -y zstd
+
+tar --zstd -xf beeping-core-linux-arm64.tar.zst
+```
+
+### Run the CLI
+
+```bash
+./bin/beeping-core --help
+./bin/beeping-core --version
+./bin/beeping-core decode path/to/sound.wav
+```
+
+First-run sanity check on a Pi:
+
+```bash
+file ./bin/beeping-core
+# ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, ...
+```
 
 ## 🌐 WASM (browser + Node.js)
 
