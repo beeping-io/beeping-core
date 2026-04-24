@@ -473,13 +473,15 @@ jobs:
             "
 
   # ---------------------------------------------------------------------------
-  # Linux — arm64 (cross-compile)
+  # Linux — arm64 (native GitHub-hosted ARM runner)
+  # ubuntu-22.04-arm = glibc 2.35 (matches amd64 baseline). Forward-compatible
+  # with Raspberry Pi OS bookworm (glibc 2.36), Ubuntu 22.04+/24.04+ arm64,
+  # Debian 12+ arm64, Fedora 41+ aarch64. Static-libstdc++/libgcc eliminates
+  # the libstdc++ runtime dependency — same trick as linux-amd64 (BEE-1729).
   # ---------------------------------------------------------------------------
   linux-arm64:
     name: Linux arm64
-    # BEE-1696 — re-enable when Linux ARM64 / Raspberry Pi validated E2E
-    if: false
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-22.04-arm
     steps:
       - uses: actions/checkout@v4
 
@@ -492,13 +494,20 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_SHARED_LIBS=OFF \
             -DBUILD_TESTING=OFF \
-            -DCMAKE_INSTALL_PREFIX=install
+            -DBEEPING_BUILD_CLI=ON \
+            -DCMAKE_INSTALL_PREFIX=install \
+            -DCMAKE_EXE_LINKER_FLAGS="-static-libgcc -static-libstdc++"
 
       - name: Build
         run: cmake --build build --config Release -j
 
       - name: Install
         run: cmake --install build
+
+      - name: Smoke-test CLI
+        run: |
+          install/bin/beeping-core --help
+          install/bin/beeping-core --version
 
       - name: Package
         run: |
@@ -507,11 +516,62 @@ jobs:
           cd ..
           sha256sum beeping-core-linux-arm64.tar.zst > beeping-core-linux-arm64.sha256
 
+      - name: Verify CLI in tarball
+        run: |
+          mkdir verify
+          tar --zstd -xf beeping-core-linux-arm64.tar.zst -C verify
+          test -x verify/bin/beeping-core || { echo "❌ CLI binary missing in packaged tarball"; exit 1; }
+          verify/bin/beeping-core --help
+
       - uses: actions/upload-artifact@v4
         with:
           name: beeping-core-linux-arm64
           path: |
             beeping-core-linux-arm64.tar.zst
+            beeping-core-linux-arm64.sha256
+
+  # ---------------------------------------------------------------------------
+  # Linux arm64 compat smoke matrix — mirrors linux-compat-smoke but pulls
+  # arm64 variants of each distro from the native ARM runner. Covers the
+  # Raspberry Pi OS bookworm baseline (== debian:12 arm64) plus the same
+  # distro set the amd64 build validates, so the arm64 binary ships with
+  # proven cross-distro portability.
+  # ---------------------------------------------------------------------------
+  linux-arm64-compat-smoke:
+    name: Linux arm64 compat (${{ matrix.image }})
+    needs: [linux-arm64]
+    runs-on: ubuntu-22.04-arm
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - ubuntu:22.04
+          - ubuntu:24.04
+          - debian:12
+          - fedora:41
+          - archlinux:latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: beeping-core-linux-arm64
+          path: artifact
+
+      - name: Smoke test arm64 binary in ${{ matrix.image }}
+        run: |
+          docker run --rm --platform linux/arm64 \
+            -v "$PWD/artifact:/release:ro" \
+            ${{ matrix.image }} \
+            sh -c "
+              set -e
+              command -v zstd >/dev/null 2>&1 || \
+                (command -v apt-get >/dev/null 2>&1 && apt-get update -qq && apt-get install -y -qq zstd) || \
+                (command -v dnf >/dev/null 2>&1 && dnf install -y -q zstd) || \
+                (command -v pacman >/dev/null 2>&1 && pacman -Sy --noconfirm zstd)
+              tar --zstd -xf /release/beeping-core-linux-arm64.tar.zst -C /opt
+              /opt/bin/beeping-core --help
+              /opt/bin/beeping-core --version
+              echo '✅ ${{ matrix.image }} arm64 OK'
+            "
             beeping-core-linux-arm64.sha256
 
   # ---------------------------------------------------------------------------
@@ -728,7 +788,7 @@ jobs:
   # ---------------------------------------------------------------------------
   hashes:
     name: Compute artifact hashes
-    needs: [macos, linux-amd64, linux-compat-smoke, windows-x64, windows-arm64, wasm, sbom]
+    needs: [macos, linux-amd64, linux-compat-smoke, linux-arm64, linux-arm64-compat-smoke, windows-x64, windows-arm64, wasm, sbom]
     runs-on: ubuntu-latest
     outputs:
       hashes: ${{ steps.compute.outputs.hashes }}
@@ -768,7 +828,7 @@ jobs:
   # ---------------------------------------------------------------------------
   release:
     name: Publish GitHub Release
-    needs: [macos, linux-amd64, linux-compat-smoke, windows-x64, windows-arm64, wasm, sbom]
+    needs: [macos, linux-amd64, linux-compat-smoke, linux-arm64, linux-arm64-compat-smoke, windows-x64, windows-arm64, wasm, sbom]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
