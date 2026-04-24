@@ -8,7 +8,7 @@
 |---|---|---|
 | 🍎 macOS (universal arm64 + x86_64) | ✅ Validated | v0.1.0 |
 | 🐧 Linux amd64 (glibc — Ubuntu 22+/24+, Debian 12+, Fedora 41+, Arch) | ✅ Validated | v0.2.0 |
-| 🪟 Windows 11 (x64) | ✅ Validated | v0.3.0 |
+| 🪟 Windows 11 (x64) | ✅ Validated | v0.3.1 |
 | 🌐 WASM (browser) | ⏳ Coming | — |
 | 🪟 Windows ARM64 | ⏳ Coming | — |
 | 🥧 Raspberry Pi / Linux ARM64 | ⏳ Coming | — |
@@ -114,10 +114,10 @@ Validated end-to-end on **Windows 11**. Built with MSVC + **static CRT** (`/MT`)
 
 ### Download
 
-Replace `v0.3.0` with the latest release tag:
+Replace `v0.3.1` with the latest release tag:
 
 ```powershell
-$tag = "v0.3.0"
+$tag = "v0.3.1"
 Invoke-WebRequest -Uri "https://github.com/beeping-io/beeping-core/releases/download/$tag/beeping-core-windows-x64.zip" -OutFile beeping-core-windows-x64.zip
 Invoke-WebRequest -Uri "https://github.com/beeping-io/beeping-core/releases/download/$tag/SHA256SUMS.txt" -OutFile SHA256SUMS.txt
 ```
