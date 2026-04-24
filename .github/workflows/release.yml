@@ -572,7 +572,6 @@ jobs:
               /opt/bin/beeping-core --version
               echo '✅ ${{ matrix.image }} arm64 OK'
             "
-            beeping-core-linux-arm64.sha256
 
   # ---------------------------------------------------------------------------
   # Android NDK — arm64-v8a, armeabi-v7a, x86_64
