@@ -629,7 +629,8 @@ jobs:
       - name: Sign binaries (cosign keyless)
         run: |
           cd artifacts
-          for f in *.tar.zst; do
+          for f in *.tar.zst *.zip; do
+            [ -f "$f" ] || continue
             cosign sign-blob --yes --output-signature "$f.sig" "$f"
           done
 
@@ -648,6 +649,7 @@ jobs:
           generate_release_notes: true
           files: |
             artifacts/*.tar.zst
+            artifacts/*.zip
             artifacts/*.sig
             artifacts/beeping-core-sbom.cdx.json
             artifacts/SHA256SUMS.txt
