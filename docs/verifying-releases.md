@@ -202,6 +202,63 @@ echo "✅ All verifications passed for $ARTIFACT"
 
 ---
 
+## 5. 🤖 Android-specific: 16 KB page-size verification
+
+Android 15+ enforces 16 KB memory pages on apps published after Nov 2025.
+The Android NDK shared libraries shipped by `beeping-core`
+(`beeping-core-android-{arm64-v8a,armeabi-v7a,x86_64}.tar.zst`) are linked
+with `-Wl,-z,max-page-size=16384`, but you can re-confirm it locally with
+`readelf` from `binutils`.
+
+```bash
+# 1. Download + extract a per-ABI tarball
+ABI=arm64-v8a   # or armeabi-v7a, x86_64
+ARTIFACT=beeping-core-android-$ABI.tar.zst
+curl -LO https://github.com/beeping-io/beeping-core/releases/download/$RELEASE/$ARTIFACT
+curl -LO https://github.com/beeping-io/beeping-core/releases/download/$RELEASE/$ARTIFACT.sig
+
+# 2. (Recommended) verify cosign signature first — same flow as section 2
+cosign verify-blob \
+  --certificate-identity-regexp "^https://github.com/beeping-io/beeping-core/\\.github/workflows/release\\.yml@" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+  --signature $ARTIFACT.sig \
+  $ARTIFACT
+
+# 3. Extract and inspect ELF program headers
+mkdir -p extract && tar --zstd -xf $ARTIFACT -C extract
+SO=$(find extract -name "libbeepingcore.so" | head -1)
+readelf -W -l "$SO" | grep "^  LOAD"
+```
+
+Use `readelf -W` (wide) so each program header is printed on a single
+line — the default output splits a LOAD record across two lines, which
+hides the Align column.
+
+Each `LOAD` segment must show alignment `>= 0x4000` (16 KB) in the last
+column:
+
+```text
+  LOAD  0x000000 0x00000000 0x00000000 0x13a270 0x13a270 R E 0x4000   ✅
+  LOAD  0x13a270 0x0013e270 0x0013e270 0x00a2e0 0x00ad90 RW  0x4000   ✅
+  LOAD  0x144550 0x0014c550 0x0014c550 0x0002e8 0x002440 RW  0x4000   ✅
+```
+
+If you see `0x1000` (4 KB) instead, the binary will fail to load at runtime
+on Android 15+ devices with the error:
+
+```text
+java.lang.UnsatisfiedLinkError: dlopen failed:
+"libbeepingcore.so" program alignment (4096) cannot be smaller than
+system page size (16384)
+```
+
+CI guards this in two places: an inline `readelf` check in the `android`
+job (build-time) and a separate `android-smoke` job that re-validates the
+*packaged* tarball post-upload, so a release with a broken alignment
+cannot be published.
+
+---
+
 ## Reporting issues
 
 If any verification fails unexpectedly, do not run the binary. Open an issue at
