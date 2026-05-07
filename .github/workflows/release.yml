@@ -577,11 +577,17 @@ jobs:
 
   # ---------------------------------------------------------------------------
   # Android NDK — arm64-v8a, armeabi-v7a, x86_64
+  #
+  # Builds shared `libbeepingcore.so` per ABI with 16 KB page-size alignment
+  # (required by Android 15+ for apps published after Nov 2025) and
+  # minSdkVersion=24 to match beeping-android (BEE-2221).
+  #
+  # OUTPUT_NAME is forced to lowercase on Android via CMakeLists.txt so the
+  # produced file is `libbeepingcore.so`, matching the JNI loader call
+  # `System.loadLibrary("beepingcore")` in beeping-android/AndroidBeepingCore.
   # ---------------------------------------------------------------------------
   android:
     name: Android NDK (${{ matrix.abi }})
-    # Phase 8 — re-enable when beeping-android SDK task validates end-to-end
-    if: false
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -591,23 +597,25 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install deps
-        run: sudo apt-get update && sudo apt-get install -y zstd
+        run: sudo apt-get update && sudo apt-get install -y zstd binutils
 
       - name: Setup Android NDK
         uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
-          ndk-version: r26d
+          ndk-version: r27c
 
       - name: Configure
         run: |
           cmake -B build \
             -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_SHARED_LIBS=OFF \
+            -DBUILD_SHARED_LIBS=ON \
             -DBUILD_TESTING=OFF \
+            -DBEEPING_BUILD_CLI=OFF \
             -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
             -DANDROID_ABI=${{ matrix.abi }} \
-            -DANDROID_PLATFORM=android-21 \
+            -DANDROID_PLATFORM=android-24 \
+            -DCMAKE_SHARED_LINKER_FLAGS="-Wl,-z,max-page-size=16384" \
             -DCMAKE_INSTALL_PREFIX=install
 
       - name: Build
@@ -615,6 +623,27 @@ jobs:
 
       - name: Install
         run: cmake --install build
+
+      - name: Verify libbeepingcore.so + 16 KB alignment (readelf)
+        run: |
+          set -e
+          SO=$(find install -name "libbeepingcore.so" | head -1)
+          test -f "$SO" || { echo "❌ libbeepingcore.so missing at expected path"; find install -type f; exit 1; }
+          test -d install/include || { echo "❌ include/ headers missing in install tree"; exit 1; }
+          echo "Found: $SO"
+          file "$SO"
+          readelf -l "$SO" | tee /tmp/elf.txt
+          # Every PT_LOAD segment must align to >= 0x4000 (16 KB) for Android 15+.
+          # Earlier alignments (0x1000 / 4 KB) trigger UnsatisfiedLinkError on
+          # 16 KB-page devices: "program alignment (4096) cannot be smaller
+          # than system page size (16384)".
+          BAD=$(awk '/^  LOAD/ {print $NF}' /tmp/elf.txt | grep -vE '^0x(4000|8000|10000|20000|40000|80000|100000)$' || true)
+          if [ -n "$BAD" ]; then
+            echo "❌ ${{ matrix.abi }}: LOAD segments with align < 0x4000 detected:"
+            echo "$BAD"
+            exit 1
+          fi
+          echo "✅ ${{ matrix.abi }}: all LOAD segments aligned to >= 16 KB"
 
       - name: Package
         run: |
@@ -629,6 +658,48 @@ jobs:
           path: |
             beeping-core-android-${{ matrix.abi }}.tar.zst
             beeping-core-android-${{ matrix.abi }}.sha256
+
+  # ---------------------------------------------------------------------------
+  # Android smoke — re-verify each just-published tarball, end-to-end:
+  # extract, confirm shape (libbeepingcore.so + include/ headers), and
+  # re-run the readelf 16 KB alignment assertion against the *packaged*
+  # binary (defends against any packaging step that might strip metadata).
+  # ---------------------------------------------------------------------------
+  android-smoke:
+    name: Android smoke (${{ matrix.abi }})
+    needs: [android]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        abi: [arm64-v8a, armeabi-v7a, x86_64]
+    steps:
+      - name: Install deps
+        run: sudo apt-get update && sudo apt-get install -y zstd binutils
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: beeping-core-android-${{ matrix.abi }}
+          path: artifact
+
+      - name: Extract + verify shape + readelf
+        run: |
+          set -e
+          mkdir -p verify
+          tar --zstd -xf artifact/beeping-core-android-${{ matrix.abi }}.tar.zst -C verify
+          echo "=== tarball contents ==="
+          find verify -maxdepth 4 -type f
+          SO=$(find verify -name "libbeepingcore.so" | head -1)
+          test -f "$SO" || { echo "❌ libbeepingcore.so missing in extracted tarball"; exit 1; }
+          test -d verify/include || { echo "❌ include/ headers missing in extracted tarball"; exit 1; }
+          file "$SO"
+          readelf -l "$SO" | grep -E "^  (LOAD|Type)"
+          BAD=$(readelf -l "$SO" | awk '/^  LOAD/ {print $NF}' | grep -vE '^0x(4000|8000|10000|20000|40000|80000|100000)$' || true)
+          if [ -n "$BAD" ]; then
+            echo "❌ Tarball ${{ matrix.abi }}: LOAD segment with align < 16 KB: $BAD"
+            exit 1
+          fi
+          echo "✅ ${{ matrix.abi }} tarball OK: libbeepingcore.so + include/ + 16 KB aligned"
 
   # ---------------------------------------------------------------------------
   # iOS — XCFramework (device + simulator)
@@ -789,7 +860,7 @@ jobs:
   # ---------------------------------------------------------------------------
   hashes:
     name: Compute artifact hashes
-    needs: [macos, linux-amd64, linux-compat-smoke, linux-arm64, linux-arm64-compat-smoke, windows-x64, windows-arm64, wasm, sbom]
+    needs: [macos, linux-amd64, linux-compat-smoke, linux-arm64, linux-arm64-compat-smoke, windows-x64, windows-arm64, android, android-smoke, wasm, sbom]
     runs-on: ubuntu-latest
     outputs:
       hashes: ${{ steps.compute.outputs.hashes }}
@@ -829,7 +900,7 @@ jobs:
   # ---------------------------------------------------------------------------
   release:
     name: Publish GitHub Release
-    needs: [macos, linux-amd64, linux-compat-smoke, linux-arm64, linux-arm64-compat-smoke, windows-x64, windows-arm64, wasm, sbom]
+    needs: [macos, linux-amd64, linux-compat-smoke, linux-arm64, linux-arm64-compat-smoke, windows-x64, windows-arm64, android, android-smoke, wasm, sbom]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:

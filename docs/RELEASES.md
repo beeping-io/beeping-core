@@ -10,9 +10,9 @@
 | 🍎 macOS | arm64 + x86_64 universal | `beeping-core-macos-universal.tar.zst` |
 | 🐧 Linux | amd64 | `beeping-core-linux-amd64.tar.zst` |
 | 🐧 Linux | arm64 | `beeping-core-linux-arm64.tar.zst` |
-| 🤖 Android NDK | arm64-v8a | `beeping-core-android-arm64-v8a.tar.zst` |
-| 🤖 Android NDK | armeabi-v7a | `beeping-core-android-armeabi-v7a.tar.zst` |
-| 🤖 Android NDK | x86_64 | `beeping-core-android-x86_64.tar.zst` |
+| 🤖 Android NDK | arm64-v8a (16 KB pages, minSdk 24) | `beeping-core-android-arm64-v8a.tar.zst` |
+| 🤖 Android NDK | armeabi-v7a (16 KB pages, minSdk 24) | `beeping-core-android-armeabi-v7a.tar.zst` |
+| 🤖 Android NDK | x86_64 (16 KB pages, minSdk 24) | `beeping-core-android-x86_64.tar.zst` |
 | 🍎 iOS | device + simulator | `beeping-core-ios-xcframework.tar.zst` |
 | 🌐 WASM | Emscripten | `beeping-core-wasm.tar.zst` |
 
@@ -56,6 +56,14 @@ tar --zstd -xf beeping-core-macos-universal.tar.zst
 # iOS (XCFramework)
 tar --zstd -xf beeping-core-ios-xcframework.tar.zst
 # Now you have: BeepingCore.xcframework — drag into Xcode
+
+# Android NDK (one tarball per ABI)
+tar --zstd -xf beeping-core-android-arm64-v8a.tar.zst
+# Now you have: lib/libbeepingcore.so + include/BeepingCoreLib_api.h
+# The .so is built with -Wl,-z,max-page-size=16384 for Android 15+ 16 KB pages
+# and named lowercase to match System.loadLibrary("beepingcore"). Drop into
+# app/src/main/jniLibs/<abi>/libbeepingcore.so. See docs/verifying-releases.md
+# section 5 for the readelf 16 KB alignment check.
 ```
 
 ## Triggering a release

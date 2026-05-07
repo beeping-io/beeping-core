@@ -73,6 +73,13 @@ set(BEEPING_CORE_SOURCES
 
 add_library(BeepingCore ${BEEPING_CORE_SOURCES})
 
+# Android JNI loads the library via System.loadLibrary("beepingcore") which
+# resolves to libbeepingcore.so. Force the output name to lowercase only on
+# Android so other platforms keep libBeepingCore.{a,so,dylib,dll} unchanged.
+if(ANDROID)
+  set_target_properties(BeepingCore PROPERTIES OUTPUT_NAME "beepingcore")
+endif()
+
 target_include_directories(BeepingCore PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
