@@ -632,12 +632,17 @@ jobs:
           test -d install/include || { echo "❌ include/ headers missing in install tree"; exit 1; }
           echo "Found: $SO"
           file "$SO"
-          readelf -l "$SO" | tee /tmp/elf.txt
+          # -W (wide) prints each program header on a single line so $NF is
+          # always the Align field, regardless of address width (32 vs 64 bit).
+          readelf -W -l "$SO" | tee /tmp/elf.txt
           # Every PT_LOAD segment must align to >= 0x4000 (16 KB) for Android 15+.
           # Earlier alignments (0x1000 / 4 KB) trigger UnsatisfiedLinkError on
           # 16 KB-page devices: "program alignment (4096) cannot be smaller
           # than system page size (16384)".
-          BAD=$(awk '/^  LOAD/ {print $NF}' /tmp/elf.txt | grep -vE '^0x(4000|8000|10000|20000|40000|80000|100000)$' || true)
+          ALIGNS=$(awk '/^  LOAD/ {print $NF}' /tmp/elf.txt)
+          test -n "$ALIGNS" || { echo "❌ no LOAD segments parsed"; exit 1; }
+          echo "Detected LOAD aligns: $ALIGNS"
+          BAD=$(echo "$ALIGNS" | grep -vE '^0x(4000|8000|10000|20000|40000|80000|100000)$' || true)
           if [ -n "$BAD" ]; then
             echo "❌ ${{ matrix.abi }}: LOAD segments with align < 0x4000 detected:"
             echo "$BAD"
@@ -693,8 +698,10 @@ jobs:
           test -f "$SO" || { echo "❌ libbeepingcore.so missing in extracted tarball"; exit 1; }
           test -d verify/include || { echo "❌ include/ headers missing in extracted tarball"; exit 1; }
           file "$SO"
-          readelf -l "$SO" | grep -E "^  (LOAD|Type)"
-          BAD=$(readelf -l "$SO" | awk '/^  LOAD/ {print $NF}' | grep -vE '^0x(4000|8000|10000|20000|40000|80000|100000)$' || true)
+          readelf -W -l "$SO" | grep "^  LOAD"
+          ALIGNS=$(readelf -W -l "$SO" | awk '/^  LOAD/ {print $NF}')
+          test -n "$ALIGNS" || { echo "❌ no LOAD segments parsed"; exit 1; }
+          BAD=$(echo "$ALIGNS" | grep -vE '^0x(4000|8000|10000|20000|40000|80000|100000)$' || true)
           if [ -n "$BAD" ]; then
             echo "❌ Tarball ${{ matrix.abi }}: LOAD segment with align < 16 KB: $BAD"
             exit 1

@@ -227,15 +227,20 @@ cosign verify-blob \
 # 3. Extract and inspect ELF program headers
 mkdir -p extract && tar --zstd -xf $ARTIFACT -C extract
 SO=$(find extract -name "libbeepingcore.so" | head -1)
-readelf -l "$SO" | grep "^  LOAD"
+readelf -W -l "$SO" | grep "^  LOAD"
 ```
 
-Each `LOAD` segment must show alignment `>= 0x4000` (16 KB):
+Use `readelf -W` (wide) so each program header is printed on a single
+line — the default output splits a LOAD record across two lines, which
+hides the Align column.
+
+Each `LOAD` segment must show alignment `>= 0x4000` (16 KB) in the last
+column:
 
 ```
-  LOAD           0x000000 ... 0x004000 R   0x4000   ✅ 16 KB OK
-  LOAD           0x004000 ... 0x004000 R E 0x4000   ✅
-  LOAD           0x010000 ... 0x004000 RW  0x4000   ✅
+  LOAD  0x000000 0x00000000 0x00000000 0x13a270 0x13a270 R E 0x4000   ✅
+  LOAD  0x13a270 0x0013e270 0x0013e270 0x00a2e0 0x00ad90 RW  0x4000   ✅
+  LOAD  0x144550 0x0014c550 0x0014c550 0x0002e8 0x002440 RW  0x4000   ✅
 ```
 
 If you see `0x1000` (4 KB) instead, the binary will fail to load at runtime
