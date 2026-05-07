@@ -237,7 +237,7 @@ hides the Align column.
 Each `LOAD` segment must show alignment `>= 0x4000` (16 KB) in the last
 column:
 
-```
+```text
   LOAD  0x000000 0x00000000 0x00000000 0x13a270 0x13a270 R E 0x4000   ✅
   LOAD  0x13a270 0x0013e270 0x0013e270 0x00a2e0 0x00ad90 RW  0x4000   ✅
   LOAD  0x144550 0x0014c550 0x0014c550 0x0002e8 0x002440 RW  0x4000   ✅
@@ -246,7 +246,7 @@ column:
 If you see `0x1000` (4 KB) instead, the binary will fail to load at runtime
 on Android 15+ devices with the error:
 
-```
+```text
 java.lang.UnsatisfiedLinkError: dlopen failed:
 "libbeepingcore.so" program alignment (4096) cannot be smaller than
 system page size (16384)
