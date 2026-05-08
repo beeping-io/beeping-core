@@ -73,6 +73,13 @@ set(BEEPING_CORE_SOURCES
 
 add_library(BeepingCore ${BEEPING_CORE_SOURCES})
 
+# Android JNI loads the library via System.loadLibrary("beepingcore") which
+# resolves to libbeepingcore.so. Force the output name to lowercase only on
+# Android so other platforms keep libBeepingCore.{a,so,dylib,dll} unchanged.
+if(ANDROID)
+  set_target_properties(BeepingCore PROPERTIES OUTPUT_NAME "beepingcore")
+endif()
+
 target_include_directories(BeepingCore PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
@@ -129,6 +136,47 @@ install(EXPORT BeepingCoreTargets
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/BeepingCore
 )
 
+# --- WASM target (Emscripten only) --------------------------------------
+# Builds `beeping-core.mjs` + `beeping-core.wasm` as an ES module that
+# exposes the full public C API from BeepingCoreLib_api.h via cwrap/ccall
+# on the JS side. No Embind bindings — the existing C ABI is the web ABI.
+# Installed into `${CMAKE_INSTALL_PREFIX}/wasm/` alongside the JS wrapper,
+# TypeScript defs, demo, and Node smoke test.
+
+if(EMSCRIPTEN)
+  add_executable(beeping_core_wasm wasm/wasm_main.cpp)
+  target_link_libraries(beeping_core_wasm PRIVATE BeepingCore)
+  set_target_properties(beeping_core_wasm PROPERTIES
+    OUTPUT_NAME "beeping-core"
+    SUFFIX ".mjs"
+  )
+  target_link_options(beeping_core_wasm PRIVATE
+    "-O3"
+    "-sMODULARIZE=1"
+    "-sEXPORT_ES6=1"
+    "-sEXPORT_NAME=createBeepingCore"
+    "-sENVIRONMENT=web,worker,node"
+    "-sALLOW_MEMORY_GROWTH=1"
+    "-sWASM=1"
+    "-sEXPORTED_FUNCTIONS=['_BEEPING_Create','_BEEPING_Destroy','_BEEPING_Configure','_BEEPING_DecodeAudioBuffer','_BEEPING_GetDecodedData','_BEEPING_GetVersion','_BEEPING_GetConfidence','_BEEPING_GetConfidenceError','_BEEPING_GetConfidenceNoise','_BEEPING_GetReceivedBeepsVolume','_BEEPING_GetDecodedMode','_malloc','_free']"
+    "-sEXPORTED_RUNTIME_METHODS=['cwrap','ccall','HEAPF32','HEAPU8','UTF8ToString','stringToUTF8','lengthBytesUTF8']"
+  )
+
+  install(PROGRAMS
+    $<TARGET_FILE:beeping_core_wasm>
+    "$<TARGET_FILE_DIR:beeping_core_wasm>/beeping-core.wasm"
+    DESTINATION wasm
+  )
+  install(FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/wasm/beeping-core.js
+    ${CMAKE_CURRENT_SOURCE_DIR}/wasm/beeping-core.d.ts
+    ${CMAKE_CURRENT_SOURCE_DIR}/wasm/demo.html
+    ${CMAKE_CURRENT_SOURCE_DIR}/wasm/smoke-test.mjs
+    ${CMAKE_CURRENT_SOURCE_DIR}/wasm/README.md
+    DESTINATION wasm
+  )
+endif()
+
 # --- Docs (Doxygen) ---
 
 find_package(Doxygen)
@@ -153,7 +201,7 @@ FetchContent_MakeAvailable(Catch2)
 
 # --- Tests ---
 
-if(BUILD_TESTING)
+if(BUILD_TESTING AND NOT EMSCRIPTEN)
   enable_testing()
 
   set(BEEPING_TEST_SOURCES
@@ -198,7 +246,7 @@ endif()
 
 # --- CLI binary ---
 
-if(BEEPING_BUILD_CLI)
+if(BEEPING_BUILD_CLI AND NOT EMSCRIPTEN)
   add_subdirectory(cli)
 endif()
 

@@ -8,10 +8,10 @@
 |---|---|---|
 | 🍎 macOS (universal arm64 + x86_64) | ✅ Validated | v0.1.0 |
 | 🐧 Linux amd64 (glibc — Ubuntu 22+/24+, Debian 12+, Fedora 41+, Arch) | ✅ Validated | v0.2.0 |
-| 🪟 Windows (x64) | ⏳ Coming | — |
-| 🌐 WASM (browser) | ⏳ Coming | — |
-| 🪟 Windows ARM64 | ⏳ Coming | — |
-| 🥧 Raspberry Pi / Linux ARM64 | ⏳ Coming | — |
+| 🪟 Windows 11 (x64) | ✅ Validated | v0.3.1 |
+| 🪟 Windows 11 (ARM64) | ✅ Validated | v0.4.0 |
+| 🌐 WASM (browser + Node) | ✅ Validated | v0.5.0 |
+| 🥧 Linux arm64 / Raspberry Pi (Pi 4 / Pi 5 / Pi Zero 2 W) | ✅ Validated | v0.6.0 |
 | 📱 iOS XCFramework | ⏳ Phase 9 | — |
 | 🤖 Android NDK | ⏳ Phase 8 | — |
 | 🏔️ Alpine Linux / musl | ❌ Not supported (glibc-only build) | — |
@@ -107,6 +107,189 @@ tar --zstd -xf beeping-core-linux-amd64.tar.zst
 ### Not supported: Alpine / musl
 
 Alpine Linux uses musl libc, not glibc — the binary won't run there. If demand surfaces, a separate `beeping-core-linux-amd64-musl.tar.zst` variant will be added in its own task.
+
+## 🪟 Windows (x64)
+
+Validated end-to-end on **Windows 11**. Built with MSVC + **static CRT** (`/MT`) — no VC++ redistributable required. Should also run on Windows 10 1809+ but officially validated on Windows 11 only.
+
+### Download
+
+Replace `v0.3.1` with the latest release tag:
+
+```powershell
+$tag = "v0.3.1"
+Invoke-WebRequest -Uri "https://github.com/beeping-io/beeping-core/releases/download/$tag/beeping-core-windows-x64.zip" -OutFile beeping-core-windows-x64.zip
+Invoke-WebRequest -Uri "https://github.com/beeping-io/beeping-core/releases/download/$tag/SHA256SUMS.txt" -OutFile SHA256SUMS.txt
+```
+
+### Verify
+
+```powershell
+$expected = (Get-Content SHA256SUMS.txt | Select-String "beeping-core-windows-x64.zip").ToString().Split(" ")[0]
+$actual = (Get-FileHash beeping-core-windows-x64.zip -Algorithm SHA256).Hash.ToLower()
+if ($expected -eq $actual) { Write-Host "✅ OK" } else { Write-Error "❌ Mismatch" }
+```
+
+### Extract
+
+```powershell
+Expand-Archive -Path .\beeping-core-windows-x64.zip -DestinationPath beeping-core
+```
+
+### Run the CLI
+
+```powershell
+.\beeping-core\bin\beeping-core.exe --help
+.\beeping-core\bin\beeping-core.exe --version
+.\beeping-core\bin\beeping-core.exe decode path\to\sound.wav
+```
+
+If Windows Defender SmartScreen warns: right-click the file → Properties → check "Unblock" at the bottom → OK. This is because the binary isn't code-signed yet (Authenticode signing will come in a later phase).
+
+## 🪟 Windows (ARM64)
+
+Validated end-to-end on **Windows 11 ARM64**. Built with MSVC ARM64 target + **static CRT** (`/MT`). Native ARM64 — no x64 emulation overhead.
+
+Target hardware: Surface Pro (ARM64), Copilot+ PCs (Snapdragon X Elite/Plus), Parallels/UTM running Windows 11 on Apple Silicon.
+
+### Download
+
+Replace `v0.4.0` with the latest release tag:
+
+```powershell
+$tag = "v0.4.0"
+Invoke-WebRequest -Uri "https://github.com/beeping-io/beeping-core/releases/download/$tag/beeping-core-windows-arm64.zip" -OutFile beeping-core-windows-arm64.zip
+Invoke-WebRequest -Uri "https://github.com/beeping-io/beeping-core/releases/download/$tag/SHA256SUMS.txt" -OutFile SHA256SUMS.txt
+```
+
+### Verify
+
+```powershell
+$expected = (Get-Content SHA256SUMS.txt | Select-String "beeping-core-windows-arm64.zip").ToString().Split(" ")[0]
+$actual = (Get-FileHash beeping-core-windows-arm64.zip -Algorithm SHA256).Hash.ToLower()
+if ($expected -eq $actual) { Write-Host "✅ OK" } else { Write-Error "❌ Mismatch" }
+```
+
+### Extract + run
+
+```powershell
+Expand-Archive -Path .\beeping-core-windows-arm64.zip -DestinationPath beeping-core
+.\beeping-core\bin\beeping-core.exe --help
+.\beeping-core\bin\beeping-core.exe --version
+.\beeping-core\bin\beeping-core.exe decode path\to\sound.wav
+```
+
+If your ARM64 Windows is running an x64 build of `beeping-core` under Prism emulation, decoding still works but isn't native. Prefer the ARM64 build for best battery + performance.
+
+## 🥧 Linux arm64 / Raspberry Pi
+
+Validated end-to-end on the GitHub-hosted **`ubuntu-22.04-arm`** runner and
+smoke-tested against Ubuntu 22.04/24.04, Debian 12 (== Raspberry Pi OS
+bookworm base) and Fedora 41 — all arm64. Built against glibc 2.35 +
+`-static-libgcc -static-libstdc++`, so the binary runs on any arm64 Linux
+with glibc 2.35+. Arch Linux ARM is a separate community project; the
+binary should also run there but it isn't part of the smoke matrix.
+
+Supported hardware:
+
+| Model | Arch | OS | Status |
+|---|---|---|---|
+| Raspberry Pi 4 / 400 | BCM2711 (ARMv8-A) | Raspberry Pi OS 64-bit · Ubuntu arm64 | ✅ |
+| Raspberry Pi 5 | BCM2712 (ARMv8.2-A) | Raspberry Pi OS 64-bit · Ubuntu arm64 | ✅ |
+| Raspberry Pi Zero 2 W | BCM2710 (ARMv8-A) | Raspberry Pi OS 64-bit | ✅ |
+| Generic Linux arm64 (Ampere, AWS Graviton, Oracle Ampere, Jetson, Pine64, Rock Pi) | ARMv8+ | any glibc 2.35+ | ✅ |
+
+32-bit Raspberry Pi OS (armhf) is **not supported** — flash the 64-bit
+image from Raspberry Pi Imager.
+
+### Download
+
+```bash
+TAG=v0.6.0
+curl -LO "https://github.com/beeping-io/beeping-core/releases/download/${TAG}/beeping-core-linux-arm64.tar.zst"
+curl -LO "https://github.com/beeping-io/beeping-core/releases/download/${TAG}/SHA256SUMS.txt"
+```
+
+### Verify
+
+```bash
+sha256sum -c SHA256SUMS.txt --ignore-missing
+```
+
+Expected: `beeping-core-linux-arm64.tar.zst: OK`.
+
+### Extract
+
+```bash
+# Raspberry Pi OS / Debian: install zstd if needed
+sudo apt-get install -y zstd
+
+tar --zstd -xf beeping-core-linux-arm64.tar.zst
+```
+
+### Run the CLI
+
+```bash
+./bin/beeping-core --help
+./bin/beeping-core --version
+./bin/beeping-core decode path/to/sound.wav
+```
+
+First-run sanity check on a Pi:
+
+```bash
+file ./bin/beeping-core
+# ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, ...
+```
+
+## 🌐 WASM (browser + Node.js)
+
+Decode WAVs in the browser or Node without any native binary. Ships as
+an ES module (`beeping-core.mjs` + `beeping-core.wasm` + a thin JS
+wrapper `beeping-core.js`) plus TypeScript definitions.
+
+### Download
+
+```bash
+TAG=v0.5.0
+curl -LO "https://github.com/beeping-io/beeping-core/releases/download/${TAG}/beeping-core-wasm.tar.zst"
+curl -LO "https://github.com/beeping-io/beeping-core/releases/download/${TAG}/SHA256SUMS.txt"
+shasum -a 256 -c SHA256SUMS.txt --ignore-missing
+tar --zstd -xf beeping-core-wasm.tar.zst
+```
+
+### Browser usage
+
+```js
+// 1. Copy wasm/ next to your app, served over HTTPS with
+//    Content-Type: application/wasm for the .wasm file.
+import { decode } from "./wasm/beeping-core.js";
+
+const file = document.querySelector("input[type=file]").files[0];
+const payload = await decode(await file.arrayBuffer());
+console.log(payload); // "h3l7m0000"
+```
+
+### Node.js usage
+
+```bash
+node wasm/smoke-test.mjs path/to/sound.wav h3l7m0000
+```
+
+Or programmatically:
+
+```js
+import { readFile } from "node:fs/promises";
+import { decode } from "./wasm/beeping-core.js";
+
+const buf = await readFile("sound.wav");
+const payload = await decode(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
+```
+
+### Demo
+
+Open `wasm/demo.html` over HTTPS (or a local static server) and drop a
+WAV onto the page. Full source is in the tarball.
 
 ## Other platforms
 

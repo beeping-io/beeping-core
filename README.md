@@ -22,8 +22,10 @@ C++20 library for encoding and decoding data over sound (Data Over Sound).
 <!-- Platform validation status -->
 ![macOS](https://img.shields.io/badge/🍎_macOS-validated-brightgreen)
 ![Linux](https://img.shields.io/badge/🐧_Linux-validated-brightgreen)
-![Windows](https://img.shields.io/badge/🪟_Windows-coming_soon-lightgrey)
-![WASM](https://img.shields.io/badge/🌐_WASM-coming_soon-lightgrey)
+![Windows x64](https://img.shields.io/badge/🪟_Windows_x64-validated-brightgreen)
+![Windows ARM64](https://img.shields.io/badge/🪟_Windows_ARM64-validated-brightgreen)
+![WASM](https://img.shields.io/badge/🌐_WASM-validated-brightgreen)
+![Raspberry Pi](https://img.shields.io/badge/🥧_Raspberry_Pi-ready-brightgreen)
 ![iOS](https://img.shields.io/badge/📱_iOS-Phase_9-lightgrey)
 ![Android](https://img.shields.io/badge/🤖_Android-Phase_8-lightgrey)
 
