@@ -15,5 +15,12 @@ jobs:
     steps:
       - uses: googleapis/release-please-action@v4
         with:
+          # The repo's default branch is `develop` (integration branch); without
+          # an explicit target-branch, release-please picks up `develop` as the
+          # release base — opening release PRs against the wrong branch and
+          # bumping versions out of step with the actual tag history. Pin to
+          # `main` since that is where releases live (release.yml fires on
+          # tag pushes from main).
+          target-branch: main
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
