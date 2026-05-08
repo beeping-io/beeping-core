@@ -709,52 +709,137 @@ jobs:
           echo "✅ ${{ matrix.abi }} tarball OK: libbeepingcore.so + include/ + 16 KB aligned"
 
   # ---------------------------------------------------------------------------
-  # iOS — XCFramework (device + simulator)
+  # iOS — XCFramework (device + simulator universal)
+  #
+  # Builds three slices and packages them into BeepingCore.xcframework:
+  #   1. ios-arm64                       (device, real iPhones / iPads)
+  #   2. ios-arm64_x86_64-simulator      (universal: Apple Silicon + Intel Mac sims)
+  #
+  # The simulator slice is built twice (arm64 and x86_64) and merged into a
+  # single universal libBeepingCore.a with lipo before being passed to
+  # xcodebuild -create-xcframework. Matches the layout that beeping-ios
+  # currently vendors via Vendor/BeepingCore.xcframework (BEE-79). Enabling
+  # this job is BEE-2223 (analog to Android's BEE-2221).
   # ---------------------------------------------------------------------------
   ios:
     name: iOS XCFramework
-    # Phase 9 — re-enable when beeping-ios SDK task validates end-to-end
-    if: false
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build iOS device (arm64)
+      # iOS slices ship with debug info embedded in the static .a archives
+      # (RelWithDebInfo = -O2 -g -DNDEBUG). The optimizer still runs, but
+      # function and source-line metadata is preserved so crash reports in
+      # consumer apps can be symbolicated through Apple's dSYM pipeline at
+      # consumer-app archive time. Adds ~5-10 MB per slice vs pure Release.
+      - name: Build iOS device (arm64) — RelWithDebInfo
         run: |
           cmake -B build-ios-device \
             -G Xcode \
-            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             -DBUILD_SHARED_LIBS=OFF \
             -DBUILD_TESTING=OFF \
+            -DBEEPING_BUILD_CLI=OFF \
             -DCMAKE_SYSTEM_NAME=iOS \
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
             -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
             -DCMAKE_OSX_SYSROOT=iphoneos \
             -DCMAKE_INSTALL_PREFIX=install-device
-          cmake --build build-ios-device --config Release -j
-          cmake --install build-ios-device --config Release
+          cmake --build build-ios-device --config RelWithDebInfo -j
+          cmake --install build-ios-device --config RelWithDebInfo
 
-      - name: Build iOS simulator (arm64)
+      - name: Build iOS simulator (arm64) — RelWithDebInfo
         run: |
-          cmake -B build-ios-sim \
+          cmake -B build-ios-sim-arm64 \
             -G Xcode \
-            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             -DBUILD_SHARED_LIBS=OFF \
             -DBUILD_TESTING=OFF \
+            -DBEEPING_BUILD_CLI=OFF \
             -DCMAKE_SYSTEM_NAME=iOS \
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
             -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
             -DCMAKE_OSX_SYSROOT=iphonesimulator \
-            -DCMAKE_INSTALL_PREFIX=install-sim
-          cmake --build build-ios-sim --config Release -j
-          cmake --install build-ios-sim --config Release
+            -DCMAKE_INSTALL_PREFIX=install-sim-arm64
+          cmake --build build-ios-sim-arm64 --config RelWithDebInfo -j
+          cmake --install build-ios-sim-arm64 --config RelWithDebInfo
+
+      - name: Build iOS simulator (x86_64 — Intel Mac legacy) — RelWithDebInfo
+        run: |
+          cmake -B build-ios-sim-x86_64 \
+            -G Xcode \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DBUILD_TESTING=OFF \
+            -DBEEPING_BUILD_CLI=OFF \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_ARCHITECTURES=x86_64 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
+            -DCMAKE_OSX_SYSROOT=iphonesimulator \
+            -DCMAKE_INSTALL_PREFIX=install-sim-x86_64
+          cmake --build build-ios-sim-x86_64 --config RelWithDebInfo -j
+          cmake --install build-ios-sim-x86_64 --config RelWithDebInfo
+
+      - name: Lipo simulator slices into a universal static archive
+        run: |
+          mkdir -p install-sim-universal/lib install-sim-universal/include
+          lipo -create \
+            install-sim-arm64/lib/libBeepingCore.a \
+            install-sim-x86_64/lib/libBeepingCore.a \
+            -output install-sim-universal/lib/libBeepingCore.a
+          cp -R install-sim-arm64/include/* install-sim-universal/include/
+          echo "=== universal simulator .a archs ==="
+          lipo -info install-sim-universal/lib/libBeepingCore.a
 
       - name: Create XCFramework
         run: |
           xcodebuild -create-xcframework \
             -library install-device/lib/libBeepingCore.a -headers install-device/include \
-            -library install-sim/lib/libBeepingCore.a -headers install-sim/include \
+            -library install-sim-universal/lib/libBeepingCore.a -headers install-sim-universal/include \
             -output BeepingCore.xcframework
+          echo "=== xcframework layout ==="
+          find BeepingCore.xcframework -maxdepth 3 | sort
+
+      - name: Verify XCFramework structure + debug info
+        run: |
+          set -e
+          plutil -lint BeepingCore.xcframework/Info.plist
+          DEV=BeepingCore.xcframework/ios-arm64/libBeepingCore.a
+          SIM=BeepingCore.xcframework/ios-arm64_x86_64-simulator/libBeepingCore.a
+          test -f "$DEV"  || { echo "❌ device slice .a missing at $DEV";  find BeepingCore.xcframework -type f; exit 1; }
+          test -f "$SIM"  || { echo "❌ simulator slice .a missing at $SIM"; find BeepingCore.xcframework -type f; exit 1; }
+          test -d BeepingCore.xcframework/ios-arm64/Headers
+          test -d BeepingCore.xcframework/ios-arm64_x86_64-simulator/Headers
+          # Architecture coverage assertions
+          DEV_ARCHS=$(lipo -archs "$DEV")
+          SIM_ARCHS=$(lipo -archs "$SIM")
+          echo "Device archs:    $DEV_ARCHS"
+          echo "Simulator archs: $SIM_ARCHS"
+          echo "$DEV_ARCHS" | grep -qw arm64   || { echo "❌ device slice missing arm64";       exit 1; }
+          echo "$SIM_ARCHS" | grep -qw arm64   || { echo "❌ simulator slice missing arm64";    exit 1; }
+          echo "$SIM_ARCHS" | grep -qw x86_64  || { echo "❌ simulator slice missing x86_64";   exit 1; }
+          # Debug-info presence: dwarfdump walks every .o inside a static archive
+          # and prints the DWARF compile-unit tree. If RelWithDebInfo did its job,
+          # we should see at least one TAG_compile_unit (one DWARF compile unit
+          # per .o). Defends against a future revert to plain Release / -O3 -DNDEBUG
+          # that would publish unsymbolicatable binaries.
+          if ! dwarfdump --debug-info "$DEV" 2>/dev/null | grep -qE "TAG_compile_unit|DW_TAG_compile_unit"; then
+            echo "❌ device slice $DEV has no DWARF compile units (RelWithDebInfo expected)"
+            dwarfdump --debug-info "$DEV" 2>&1 | head -20
+            exit 1
+          fi
+          if ! dwarfdump --debug-info "$SIM" 2>/dev/null | grep -qE "TAG_compile_unit|DW_TAG_compile_unit"; then
+            echo "❌ simulator slice $SIM has no DWARF compile units"
+            exit 1
+          fi
+          # Count compile units as evidence and to spot ridiculously low values
+          DEV_CU=$(dwarfdump --debug-info "$DEV" 2>/dev/null | grep -cE "TAG_compile_unit|DW_TAG_compile_unit" || echo 0)
+          SIM_CU=$(dwarfdump --debug-info "$SIM" 2>/dev/null | grep -cE "TAG_compile_unit|DW_TAG_compile_unit" || echo 0)
+          echo "Device DWARF compile units:    $DEV_CU"
+          echo "Simulator DWARF compile units: $SIM_CU"
+          test "$DEV_CU" -ge 5 || { echo "❌ device slice has only $DEV_CU compile units (expected >=5)"; exit 1; }
+          test "$SIM_CU" -ge 5 || { echo "❌ simulator slice has only $SIM_CU compile units (expected >=5)"; exit 1; }
+          echo "✅ XCFramework structure + arch coverage + DWARF debug info OK"
 
       - name: Package
         run: |
@@ -767,6 +852,44 @@ jobs:
           path: |
             beeping-core-ios-xcframework.tar.zst
             beeping-core-ios-xcframework.sha256
+
+  # ---------------------------------------------------------------------------
+  # iOS smoke — re-verify the just-published xcframework tarball end-to-end:
+  # extract, plutil-lint Info.plist, lipo-info each .a, confirm both slices
+  # carry the expected architecture set. Mirrors the android-smoke pattern
+  # so a release with a broken xcframework cannot proceed to hashes/release.
+  # ---------------------------------------------------------------------------
+  ios-smoke:
+    name: iOS smoke (xcframework)
+    needs: [ios]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: beeping-core-ios-xcframework
+          path: artifact
+
+      - name: Extract + verify shape + lipo
+        run: |
+          set -e
+          mkdir -p verify
+          tar --zstd -xf artifact/beeping-core-ios-xcframework.tar.zst -C verify
+          echo "=== tarball contents ==="
+          find verify -maxdepth 4 -type f | sort
+          XCFW=verify/BeepingCore.xcframework
+          test -d "$XCFW" || { echo "❌ BeepingCore.xcframework missing in tarball"; exit 1; }
+          plutil -lint "$XCFW/Info.plist"
+          DEV=$XCFW/ios-arm64/libBeepingCore.a
+          SIM=$XCFW/ios-arm64_x86_64-simulator/libBeepingCore.a
+          test -f "$DEV" -a -f "$SIM" || { echo "❌ slice .a missing"; exit 1; }
+          test -d $XCFW/ios-arm64/Headers -a -d $XCFW/ios-arm64_x86_64-simulator/Headers
+          DEV_ARCHS=$(lipo -archs "$DEV")
+          SIM_ARCHS=$(lipo -archs "$SIM")
+          echo "Device:    $DEV_ARCHS"
+          echo "Simulator: $SIM_ARCHS"
+          echo "$DEV_ARCHS" | grep -qw arm64                                  || { echo "❌ device !arm64";  exit 1; }
+          echo "$SIM_ARCHS" | grep -qw arm64 && echo "$SIM_ARCHS" | grep -qw x86_64 || { echo "❌ sim !arm64+x86_64"; exit 1; }
+          echo "✅ iOS XCFramework tarball OK: device + universal simulator + headers"
 
   # ---------------------------------------------------------------------------
   # WASM — Emscripten
@@ -867,7 +990,7 @@ jobs:
   # ---------------------------------------------------------------------------
   hashes:
     name: Compute artifact hashes
-    needs: [macos, linux-amd64, linux-compat-smoke, linux-arm64, linux-arm64-compat-smoke, windows-x64, windows-arm64, android, android-smoke, wasm, sbom]
+    needs: [macos, linux-amd64, linux-compat-smoke, linux-arm64, linux-arm64-compat-smoke, windows-x64, windows-arm64, android, android-smoke, ios, ios-smoke, wasm, sbom]
     runs-on: ubuntu-latest
     outputs:
       hashes: ${{ steps.compute.outputs.hashes }}
@@ -907,7 +1030,7 @@ jobs:
   # ---------------------------------------------------------------------------
   release:
     name: Publish GitHub Release
-    needs: [macos, linux-amd64, linux-compat-smoke, linux-arm64, linux-arm64-compat-smoke, windows-x64, windows-arm64, android, android-smoke, wasm, sbom]
+    needs: [macos, linux-amd64, linux-compat-smoke, linux-arm64, linux-arm64-compat-smoke, windows-x64, windows-arm64, android, android-smoke, ios, ios-smoke, wasm, sbom]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:

@@ -202,7 +202,73 @@ echo "✅ All verifications passed for $ARTIFACT"
 
 ---
 
-## 5. 🤖 Android-specific: 16 KB page-size verification
+## 5. 🍎 iOS-specific: XCFramework structure verification
+
+The iOS artifact `beeping-core-ios-xcframework.tar.zst` ships a single
+`BeepingCore.xcframework` directory containing two slices:
+
+| Slice | Architecture(s) | Use |
+|---|---|---|
+| `ios-arm64` | `arm64` | Real iPhones / iPads |
+| `ios-arm64_x86_64-simulator` | `arm64` + `x86_64` (universal) | Simulator on Apple Silicon **and** legacy Intel Macs |
+
+Verify locally with `lipo` (bundled with Xcode) and `plutil`:
+
+```bash
+RELEASE=v1.0.0
+ARTIFACT=beeping-core-ios-xcframework.tar.zst
+curl -LO https://github.com/beeping-io/beeping-core/releases/download/$RELEASE/$ARTIFACT
+curl -LO https://github.com/beeping-io/beeping-core/releases/download/$RELEASE/$ARTIFACT.sig
+
+# (Recommended) cosign verify first — same flow as section 2
+cosign verify-blob \
+  --certificate-identity-regexp "^https://github.com/beeping-io/beeping-core/\\.github/workflows/release\\.yml@" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+  --signature $ARTIFACT.sig \
+  $ARTIFACT
+
+# Extract + inspect
+mkdir -p extract && tar --zstd -xf $ARTIFACT -C extract
+XCFW=extract/BeepingCore.xcframework
+
+# Info.plist must be a valid plist
+plutil -lint "$XCFW/Info.plist"
+
+# Each slice must carry the expected architectures
+lipo -archs "$XCFW/ios-arm64/libBeepingCore.a"
+# → arm64
+lipo -archs "$XCFW/ios-arm64_x86_64-simulator/libBeepingCore.a"
+# → x86_64 arm64
+```
+
+If `lipo -archs` reports an unexpected architecture set (e.g. only
+`arm64` on the simulator slice), you have a partial XCFramework —
+Apple Silicon devs would still be fine but the package would not load
+in the simulator on legacy Intel Macs. CI guards both invariants in two
+places (the `ios` build job + the `ios-smoke` post-package job) so a
+release with a malformed XCFramework cannot be published.
+
+To consume the XCFramework: drop it into your Xcode project, link
+`BeepingCore.xcframework` from the Frameworks build phase, and import
+the C API headers (`BeepingCoreLib_api.h`) from a bridging header or
+modulemap.
+
+The shipped slices are built with `-DCMAKE_BUILD_TYPE=RelWithDebInfo`
+(`-O2 -g -DNDEBUG`), so DWARF debug info is embedded in the static
+archives. When you archive your app, Xcode picks up those symbols and
+emits a `.dSYM` for `BeepingCore` alongside the one for your app —
+crash reports from production users will be fully symbolicatable.
+You can confirm DWARF presence with `dwarfdump` (bundled with Xcode):
+
+```bash
+DEV=BeepingCore.xcframework/ios-arm64/libBeepingCore.a
+dwarfdump --debug-info "$DEV" | grep -c "TAG_compile_unit"
+# expected: ≥ 5  (one DWARF compile unit per .o; a healthy slice has dozens)
+```
+
+---
+
+## 6. 🤖 Android-specific: 16 KB page-size verification
 
 Android 15+ enforces 16 KB memory pages on apps published after Nov 2025.
 The Android NDK shared libraries shipped by `beeping-core`
