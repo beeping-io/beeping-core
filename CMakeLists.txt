@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.25)
 
 project(BeepingCore
-  VERSION 0.1.0 # x-release-please-version
+  VERSION 0.7.0 # x-release-please-version
   DESCRIPTION "C++20 library for encoding and decoding data over sound"
   HOMEPAGE_URL "https://github.com/beeping-io/beeping-core"
   LANGUAGES CXX
