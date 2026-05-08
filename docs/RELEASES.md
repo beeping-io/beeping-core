@@ -13,7 +13,7 @@
 | 🤖 Android NDK | arm64-v8a (16 KB pages, minSdk 24) | `beeping-core-android-arm64-v8a.tar.zst` |
 | 🤖 Android NDK | armeabi-v7a (16 KB pages, minSdk 24) | `beeping-core-android-armeabi-v7a.tar.zst` |
 | 🤖 Android NDK | x86_64 (16 KB pages, minSdk 24) | `beeping-core-android-x86_64.tar.zst` |
-| 🍎 iOS | device arm64 + simulator universal (arm64 + x86_64), iOS 13+ | `beeping-core-ios-xcframework.tar.zst` |
+| 🍎 iOS | device arm64 + simulator universal (arm64 + x86_64), iOS 13+, RelWithDebInfo (DWARF embedded) | `beeping-core-ios-xcframework.tar.zst` |
 | 🌐 WASM | Emscripten | `beeping-core-wasm.tar.zst` |
 
 Each release also includes:

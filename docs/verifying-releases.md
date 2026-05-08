@@ -253,6 +253,21 @@ To consume the XCFramework: drop it into your Xcode project, link
 the C API headers (`BeepingCoreLib_api.h`) from a bridging header or
 modulemap.
 
+The shipped slices are built with `-DCMAKE_BUILD_TYPE=RelWithDebInfo`
+(`-O2 -g -DNDEBUG`), so DWARF debug info is embedded in the static
+archives. When you archive your app, Xcode picks up those symbols and
+emits a `.dSYM` for `BeepingCore` alongside the one for your app —
+crash reports from production users will be fully symbolicatable.
+You can confirm DWARF presence by extracting any `.o` object file
+from a slice and inspecting it:
+
+```bash
+mkdir _dwarf && cd _dwarf
+ar x ../BeepingCore.xcframework/ios-arm64/libBeepingCore.a
+otool -l $(ls *.o | head -1) | grep -E "__debug_info|__DWARF"
+# expected: at least one __debug_info / __DWARF segment
+```
+
 ---
 
 ## 6. 🤖 Android-specific: 16 KB page-size verification

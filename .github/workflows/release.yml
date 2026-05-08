@@ -727,11 +727,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build iOS device (arm64)
+      # iOS slices ship with debug info embedded in the static .a archives
+      # (RelWithDebInfo = -O2 -g -DNDEBUG). The optimizer still runs, but
+      # function and source-line metadata is preserved so crash reports in
+      # consumer apps can be symbolicated through Apple's dSYM pipeline at
+      # consumer-app archive time. Adds ~5-10 MB per slice vs pure Release.
+      - name: Build iOS device (arm64) — RelWithDebInfo
         run: |
           cmake -B build-ios-device \
             -G Xcode \
-            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             -DBUILD_SHARED_LIBS=OFF \
             -DBUILD_TESTING=OFF \
             -DBEEPING_BUILD_CLI=OFF \
@@ -740,14 +745,14 @@ jobs:
             -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
             -DCMAKE_OSX_SYSROOT=iphoneos \
             -DCMAKE_INSTALL_PREFIX=install-device
-          cmake --build build-ios-device --config Release -j
-          cmake --install build-ios-device --config Release
+          cmake --build build-ios-device --config RelWithDebInfo -j
+          cmake --install build-ios-device --config RelWithDebInfo
 
-      - name: Build iOS simulator (arm64)
+      - name: Build iOS simulator (arm64) — RelWithDebInfo
         run: |
           cmake -B build-ios-sim-arm64 \
             -G Xcode \
-            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             -DBUILD_SHARED_LIBS=OFF \
             -DBUILD_TESTING=OFF \
             -DBEEPING_BUILD_CLI=OFF \
@@ -756,14 +761,14 @@ jobs:
             -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
             -DCMAKE_OSX_SYSROOT=iphonesimulator \
             -DCMAKE_INSTALL_PREFIX=install-sim-arm64
-          cmake --build build-ios-sim-arm64 --config Release -j
-          cmake --install build-ios-sim-arm64 --config Release
+          cmake --build build-ios-sim-arm64 --config RelWithDebInfo -j
+          cmake --install build-ios-sim-arm64 --config RelWithDebInfo
 
-      - name: Build iOS simulator (x86_64 — Intel Mac legacy)
+      - name: Build iOS simulator (x86_64 — Intel Mac legacy) — RelWithDebInfo
         run: |
           cmake -B build-ios-sim-x86_64 \
             -G Xcode \
-            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             -DBUILD_SHARED_LIBS=OFF \
             -DBUILD_TESTING=OFF \
             -DBEEPING_BUILD_CLI=OFF \
@@ -772,8 +777,8 @@ jobs:
             -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
             -DCMAKE_OSX_SYSROOT=iphonesimulator \
             -DCMAKE_INSTALL_PREFIX=install-sim-x86_64
-          cmake --build build-ios-sim-x86_64 --config Release -j
-          cmake --install build-ios-sim-x86_64 --config Release
+          cmake --build build-ios-sim-x86_64 --config RelWithDebInfo -j
+          cmake --install build-ios-sim-x86_64 --config RelWithDebInfo
 
       - name: Lipo simulator slices into a universal static archive
         run: |
@@ -795,7 +800,7 @@ jobs:
           echo "=== xcframework layout ==="
           find BeepingCore.xcframework -maxdepth 3 | sort
 
-      - name: Verify XCFramework structure
+      - name: Verify XCFramework structure + debug info
         run: |
           set -e
           plutil -lint BeepingCore.xcframework/Info.plist
@@ -813,7 +818,23 @@ jobs:
           echo "$DEV_ARCHS" | grep -qw arm64   || { echo "❌ device slice missing arm64";       exit 1; }
           echo "$SIM_ARCHS" | grep -qw arm64   || { echo "❌ simulator slice missing arm64";    exit 1; }
           echo "$SIM_ARCHS" | grep -qw x86_64  || { echo "❌ simulator slice missing x86_64";   exit 1; }
-          echo "✅ XCFramework structure + arch coverage OK"
+          # Debug-info presence: extract one .o from each .a and confirm it has DWARF
+          # sections (__debug_info / __debug_line). RelWithDebInfo embeds DWARF in the
+          # static archive object files; if a future change drops -g this assertion
+          # catches it before the release publishes unsymbolicatable binaries.
+          mkdir -p _dwarf_check && cd _dwarf_check
+          # Pick any object file from the device slice
+          ar t "../$DEV" | head -1 | xargs -I{} ar x "../$DEV" {}
+          OBJ=$(ls *.o | head -1)
+          test -n "$OBJ" || { echo "❌ no .o objects extracted from device .a"; exit 1; }
+          if ! otool -l "$OBJ" 2>/dev/null | grep -qE "__debug_info|__DWARF"; then
+            echo "❌ device slice $OBJ has no DWARF debug info (RelWithDebInfo expected)"
+            otool -l "$OBJ" | head -40
+            exit 1
+          fi
+          cd ..
+          rm -rf _dwarf_check
+          echo "✅ XCFramework structure + arch coverage + DWARF debug info OK"
 
       - name: Package
         run: |
