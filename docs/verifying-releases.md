@@ -258,14 +258,12 @@ The shipped slices are built with `-DCMAKE_BUILD_TYPE=RelWithDebInfo`
 archives. When you archive your app, Xcode picks up those symbols and
 emits a `.dSYM` for `BeepingCore` alongside the one for your app —
 crash reports from production users will be fully symbolicatable.
-You can confirm DWARF presence by extracting any `.o` object file
-from a slice and inspecting it:
+You can confirm DWARF presence with `dwarfdump` (bundled with Xcode):
 
 ```bash
-mkdir _dwarf && cd _dwarf
-ar x ../BeepingCore.xcframework/ios-arm64/libBeepingCore.a
-otool -l $(ls *.o | head -1) | grep -E "__debug_info|__DWARF"
-# expected: at least one __debug_info / __DWARF segment
+DEV=BeepingCore.xcframework/ios-arm64/libBeepingCore.a
+dwarfdump --debug-info "$DEV" | grep -c "TAG_compile_unit"
+# expected: ≥ 5  (one DWARF compile unit per .o; a healthy slice has dozens)
 ```
 
 ---

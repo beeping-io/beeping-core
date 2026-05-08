@@ -818,22 +818,27 @@ jobs:
           echo "$DEV_ARCHS" | grep -qw arm64   || { echo "❌ device slice missing arm64";       exit 1; }
           echo "$SIM_ARCHS" | grep -qw arm64   || { echo "❌ simulator slice missing arm64";    exit 1; }
           echo "$SIM_ARCHS" | grep -qw x86_64  || { echo "❌ simulator slice missing x86_64";   exit 1; }
-          # Debug-info presence: extract one .o from each .a and confirm it has DWARF
-          # sections (__debug_info / __debug_line). RelWithDebInfo embeds DWARF in the
-          # static archive object files; if a future change drops -g this assertion
-          # catches it before the release publishes unsymbolicatable binaries.
-          mkdir -p _dwarf_check && cd _dwarf_check
-          # Pick any object file from the device slice
-          ar t "../$DEV" | head -1 | xargs -I{} ar x "../$DEV" {}
-          OBJ=$(ls *.o | head -1)
-          test -n "$OBJ" || { echo "❌ no .o objects extracted from device .a"; exit 1; }
-          if ! otool -l "$OBJ" 2>/dev/null | grep -qE "__debug_info|__DWARF"; then
-            echo "❌ device slice $OBJ has no DWARF debug info (RelWithDebInfo expected)"
-            otool -l "$OBJ" | head -40
+          # Debug-info presence: dwarfdump walks every .o inside a static archive
+          # and prints the DWARF compile-unit tree. If RelWithDebInfo did its job,
+          # we should see at least one TAG_compile_unit (one DWARF compile unit
+          # per .o). Defends against a future revert to plain Release / -O3 -DNDEBUG
+          # that would publish unsymbolicatable binaries.
+          if ! dwarfdump --debug-info "$DEV" 2>/dev/null | grep -qE "TAG_compile_unit|DW_TAG_compile_unit"; then
+            echo "❌ device slice $DEV has no DWARF compile units (RelWithDebInfo expected)"
+            dwarfdump --debug-info "$DEV" 2>&1 | head -20
             exit 1
           fi
-          cd ..
-          rm -rf _dwarf_check
+          if ! dwarfdump --debug-info "$SIM" 2>/dev/null | grep -qE "TAG_compile_unit|DW_TAG_compile_unit"; then
+            echo "❌ simulator slice $SIM has no DWARF compile units"
+            exit 1
+          fi
+          # Count compile units as evidence and to spot ridiculously low values
+          DEV_CU=$(dwarfdump --debug-info "$DEV" 2>/dev/null | grep -cE "TAG_compile_unit|DW_TAG_compile_unit" || echo 0)
+          SIM_CU=$(dwarfdump --debug-info "$SIM" 2>/dev/null | grep -cE "TAG_compile_unit|DW_TAG_compile_unit" || echo 0)
+          echo "Device DWARF compile units:    $DEV_CU"
+          echo "Simulator DWARF compile units: $SIM_CU"
+          test "$DEV_CU" -ge 5 || { echo "❌ device slice has only $DEV_CU compile units (expected >=5)"; exit 1; }
+          test "$SIM_CU" -ge 5 || { echo "❌ simulator slice has only $SIM_CU compile units (expected >=5)"; exit 1; }
           echo "✅ XCFramework structure + arch coverage + DWARF debug info OK"
 
       - name: Package
