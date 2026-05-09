@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/beeping-io/beeping-core/compare/v0.7.0...v0.8.0) (2026-05-09)
+
+
+### ✨ Features
+
+* **ci:** BEE-2224 release-please uses GitHub App token ([#31](https://github.com/beeping-io/beeping-core/issues/31)) ([f30b688](https://github.com/beeping-io/beeping-core/commit/f30b688ee987b4c2065907acebfe3ccea0b49e70))
+
 ## [0.7.0](https://github.com/beeping-io/beeping-core/compare/v0.6.0...v0.7.0) (2026-05-08)
 
 
