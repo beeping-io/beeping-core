@@ -159,6 +159,13 @@ extern "C"
 #ifdef __cplusplus
 extern "C"
 #endif  //__cplusplus
+    int32_t BEEPING_SetLogPath(const char* absolutePath) {
+  return BEEPING::setLogPath(absolutePath);
+}
+
+#ifdef __cplusplus
+extern "C"
+#endif  //__cplusplus
     int32_t BEEPING_SetAudioSignature(int32_t samplesSize,
                                       const float* samplesBuffer,
                                       void* beepingObject) {

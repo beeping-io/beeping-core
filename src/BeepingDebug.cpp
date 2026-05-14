@@ -1,8 +1,15 @@
 #include <BeepingDebug.h>
-#include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/spdlog.h>
 
+#ifdef __ANDROID__
+#include <spdlog/sinks/android_sink.h>
+#else
+#include <spdlog/sinks/null_sink.h>
+#include <spdlog/sinks/rotating_file_sink.h>
+#endif
+
 #include <atomic>
+#include <cstdio>
 #include <cstdlib>
 #include <mutex>
 #include <string>
@@ -17,13 +24,32 @@
 
 namespace BEEPING {
 
+static constexpr const char* kDefaultLogPath = "logs/beeping.log";
 static std::mutex g_init_mutex;
 static std::atomic<bool> g_initialized{false};
 static std::atomic<int> g_session_count{0};
+static std::string g_log_path = kDefaultLogPath;
 
 void ensureBeepingLogger() {
   if (g_initialized.load(std::memory_order_acquire)) return;
   initBeepingLogger();
+}
+
+int setLogPath(const char* absolutePath) {
+#ifdef __ANDROID__
+  (void)absolutePath;
+  return 0;
+#else
+  std::lock_guard<std::mutex> lk(g_init_mutex);
+  if (g_initialized.load(std::memory_order_relaxed)) return -1;
+  if (absolutePath == nullptr) {
+    g_log_path = kDefaultLogPath;
+    return 0;
+  }
+  if (*absolutePath == '\0') return -2;
+  g_log_path = absolutePath;
+  return 0;
+#endif
 }
 
 void initBeepingLogger() {
@@ -33,18 +59,43 @@ void initBeepingLogger() {
     return;
   }
 
-  // Create logs directory
-  beeping_mkdir("logs");
+  std::shared_ptr<spdlog::sinks::sink> sink;
+  std::string sink_kind;
 
-  // Rotating file sink: 5MB max, 10 files
-  auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
-      "logs/beeping.log", 5 * 1024 * 1024, 10);
+#ifdef __ANDROID__
+  // Logcat sink — no filesystem dependency, immune to a read-only cwd.
+  sink = std::make_shared<spdlog::sinks::android_sink_mt>("BeepingCore");
+  sink_kind = "android(logcat)";
+#else
+  // Best-effort: if the path is the legacy default, try to create the
+  // companion `logs/` directory. Failure is fine; the open below will
+  // surface any real problem.
+  if (g_log_path == kDefaultLogPath) {
+    beeping_mkdir("logs");
+  }
 
-  // JSON pattern
-  file_sink->set_pattern(
+  try {
+    sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
+        g_log_path, 5 * 1024 * 1024, 10);
+    sink_kind = "file:" + g_log_path;
+  } catch (const spdlog::spdlog_ex& ex) {
+    // Unwritable target — drop logs silently instead of crashing the host
+    // process. One-time warning to stderr so the misconfiguration is
+    // discoverable in dev.
+    std::fprintf(
+        stderr,
+        "[beeping-core] log path %s unwritable (%s); logs disabled. Call "
+        "BEEPING_SetLogPath() before BEEPING_Create() to redirect.\n",
+        g_log_path.c_str(), ex.what());
+    sink = std::make_shared<spdlog::sinks::null_sink_mt>();
+    sink_kind = "null(unwritable)";
+  }
+#endif
+
+  sink->set_pattern(
       R"({"ts":"%Y-%m-%dT%H:%M:%S.%e","level":"%l","msg":"%v"})");
 
-  auto logger = std::make_shared<spdlog::logger>("beeping", file_sink);
+  auto logger = std::make_shared<spdlog::logger>("beeping", sink);
 
   // Read log level from env var BEEPING_LOG_LEVEL
   const char* env_level = std::getenv("BEEPING_LOG_LEVEL");
@@ -69,7 +120,8 @@ void initBeepingLogger() {
   g_initialized.store(true, std::memory_order_release);
   g_session_count.store(1);
 
-  spdlog::info("BeepingCore logger initialized (level={})", level_str);
+  spdlog::info("BeepingCore logger initialized (sink={} level={})", sink_kind,
+               level_str);
 }
 
 void shutdownBeepingLogger() {

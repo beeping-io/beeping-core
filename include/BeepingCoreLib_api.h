@@ -108,6 +108,29 @@ BEEPING_DLLEXPORT int32_t BEEPING_Configure(int mode, float samplingRate,
                                             void* beepingObject);
 
 /**
+ * @brief Override the log file path used by the library.
+ *
+ * Must be called *before* BEEPING_Create() to take effect. The library
+ * writes logs to a rotating file at this path; if the path cannot be
+ * opened the library falls back to a null sink (no logs) rather than
+ * crashing.
+ *
+ * @param absolutePath Absolute path to the log file. Pass `nullptr` to
+ *        reset to the default (`logs/beeping.log` relative to cwd).
+ * @return 0 on success; -1 if the logger was already initialized (call
+ *         is ignored); -2 if the argument is empty.
+ *
+ * Notes:
+ * - On Android, this is a no-op and returns 0 — the library always writes
+ *   to logcat (tag `BeepingCore`), so a writable filesystem is not
+ *   required.
+ * - On every other platform, if the configured path cannot be opened the
+ *   library logs are silently dropped (with a one-time warning to stderr)
+ *   instead of crashing the host process.
+ */
+BEEPING_DLLEXPORT int32_t BEEPING_SetLogPath(const char* absolutePath);
+
+/**
  * @brief Install a custom audio signature to mix with encoded output.
  *
  * The signature is mixed on top of the tones during playback, useful to
