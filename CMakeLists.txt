@@ -67,6 +67,7 @@ set(BEEPING_CORE_SOURCES
   src/DecoderNonAudibleMultiTone.cpp
   src/DecoderAllMultiTone.cpp
   src/Globals.cpp
+  src/Scheduler.cpp
   src/SpectralAnalysis.cpp
   src/ReedSolomon.cpp
 )
@@ -208,6 +209,7 @@ if(BUILD_TESTING AND NOT EMSCRIPTEN)
     tests/UnitTests.cpp
     tests/RoundTripTests.cpp
     tests/ConcurrencyTests.cpp
+    tests/SchedulerTest.cpp
   )
   if(BEEPING_BUILD_CLI)
     list(APPEND BEEPING_TEST_SOURCES tests/CLIIntegrationTest.cpp)
