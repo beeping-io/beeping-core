@@ -111,6 +111,68 @@ mono or stereo (downmixed to mono).
 
 Full docs: [`docs/cli.md`](docs/cli.md).
 
+## Time-scheduled encoding
+
+`beeping-core` exposes three C-API entry points that turn a short payload
+into a series of beeps spread across `duration` seconds. Each beep's payload
+is `code + base32(round(timestamp_seconds))`, so a decoder can recover its
+position within the schedule.
+
+```c
+#include <BeepingCoreLib_api.h>
+
+void* core = BEEPING_Create();
+BEEPING_Configure(BEEPING_MODE_INAUDIBLE, 44100.0f, 128, core);
+
+// 1) Query the required output buffer size (samples)
+int32_t requiredSamples = BEEPING_GetScheduleBufferSize(/*duration=*/10.0f, core);
+
+// 2) (Optional) Inspect the schedule timestamps in seconds
+double timestamps[16];
+int32_t count = 0;
+BEEPING_ComputeBeepSchedule(/*duration*/ 10.0f, /*startTime*/ 0.0f,
+                            /*interval*/ 2.3f, timestamps, 16, &count);
+// count == 4, timestamps == {0.0, 2.3, 4.6, 6.9}
+
+// 3) Render the audio
+float* pcm = (float*)malloc(requiredSamples * sizeof(float));
+int32_t written = 0;
+BEEPING_EncodeWithSchedule("abcde", 5, /*type*/ 0, NULL, 0,
+                           /*duration*/ 10.0f, /*startTime*/ 0.0f,
+                           /*interval*/ 2.3f, /*beepGainDb*/ -3.0f,
+                           pcm, requiredSamples, &written, core);
+
+// pcm now holds `written` mono float samples at 44100 Hz, ready to play
+// or to dump into a WAV.
+
+free(pcm);
+BEEPING_Destroy(core);
+```
+
+Constraints: `duration` and `interval` must be `>= 2.3` (the minimum beep
+window), `startTime >= 0`, `startTime + 2.3 <= duration`. `beepGainDb` is
+clamped to `[-60, +12]`.
+
+On the **decode side**, a single captured beep yields the full payload
+(`code + base32(ts)`). Split it via the matching parser so SDK wrappers
+don't reimplement the convention:
+
+```c
+// After BEEPING_DecodeAudioBuffer(...) signals -3 (word decoded):
+char code[16] = {};
+int32_t codeLen = 0;
+int32_t tsSec = 0;
+int32_t rc = BEEPING_GetDecodedScheduledPayload(
+    code, sizeof(code), &codeLen, &tsSec, core);
+if (rc > 0) {
+  // code  == "abcde"
+  // tsSec ==  4   (i.e. the captured beep is the one at t=4.6s, rounded)
+}
+```
+
+`BEEPING_ParseScheduledPayload` is also exposed for parsing payloads
+obtained from elsewhere (e.g. log lines, network frames).
+
 ## Releases & verification
 
 Pre-built binaries for macOS, Linux, Android, iOS and WASM are published on

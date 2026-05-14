@@ -404,6 +404,14 @@ void ReedSolomon::GetCode(std::vector<int>& code) {
 
 // decoding received code
 void ReedSolomon::SetCode(const std::vector<int> code) {
+  // BEE-2228: defensive guard. The legacy condition below allows entry to
+  // the shortened-code branch even when `code` is empty or too short, and
+  // then dereferences code[msg_len + i] unconditionally — SIGSEGV. Refuse
+  // to enter the branch unless the caller has supplied at least
+  // `msg_len + (nn - kk)` elements, which is what the loops below assume.
+  if (static_cast<int>(code.size()) < msg_len + (nn - kk)) {
+    return;
+  }
   if ((static_cast<int>(code.size()) < kk) && (msg_len < kk)) {
     // copy received error code digits (8)
     for (int i = 0; i < (nn - kk); ++i) recd[i] = code[msg_len + i];

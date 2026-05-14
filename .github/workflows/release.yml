@@ -1057,15 +1057,36 @@ jobs:
           cd artifacts
           for f in *.tar.zst *.zip; do
             [ -f "$f" ] || continue
-            cosign sign-blob --yes --output-signature "$f.sig" "$f"
+            cosign sign-blob --yes --bundle "$f.cosign.bundle" "$f"
           done
 
       - name: Sign SBOM (cosign keyless)
         run: |
           cd artifacts
           cosign sign-blob --yes \
-            --output-signature beeping-core-sbom.cdx.json.sig \
+            --bundle beeping-core-sbom.cdx.json.cosign.bundle \
             beeping-core-sbom.cdx.json
+
+      - name: Verify bundles (smoke test)
+        run: |
+          cd artifacts
+          fail=0
+          for f in *.tar.zst *.zip beeping-core-sbom.cdx.json; do
+            [ -f "$f" ] || continue
+            if [ ! -f "$f.cosign.bundle" ]; then
+              echo "::error::missing $f.cosign.bundle"
+              fail=1
+              continue
+            fi
+            echo "::group::verify $f"
+            cosign verify-blob \
+              --bundle "$f.cosign.bundle" \
+              --certificate-identity-regexp '^https://github\.com/beeping-io/beeping-core/\.github/workflows/release\.yml@refs/tags/.*' \
+              --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+              "$f" || fail=1
+            echo "::endgroup::"
+          done
+          exit $fail
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -1076,6 +1097,6 @@ jobs:
           files: |
             artifacts/*.tar.zst
             artifacts/*.zip
-            artifacts/*.sig
+            artifacts/*.cosign.bundle
             artifacts/beeping-core-sbom.cdx.json
             artifacts/SHA256SUMS.txt

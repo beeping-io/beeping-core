@@ -14,7 +14,13 @@
 namespace BEEPING {
 
 // Initialize the beeping logger (safe to call multiple times).
-// Creates a rotating file logger in logs/ with JSON pattern.
+//
+// On Android the sink writes to logcat (tag "BeepingCore") and is always
+// available. On every other platform the sink is a rotating file at the
+// path set by setLogPath() (default "logs/beeping.log" relative to cwd);
+// if that path cannot be opened the logger falls back to a null sink so
+// the host process never crashes due to an unwritable working directory.
+//
 // Reads BEEPING_LOG_LEVEL env var (trace/debug/info/warn/error, default: warn).
 void initBeepingLogger();
 
@@ -23,6 +29,12 @@ void shutdownBeepingLogger();
 
 // Ensure logger is initialized before use
 void ensureBeepingLogger();
+
+// Override the log file path used on non-Android targets. Must be called
+// before initBeepingLogger() / BEEPING_Create() — otherwise it is ignored
+// and returns -1. Pass nullptr to reset to the default. Returns -2 if the
+// argument is empty. On Android this is a no-op and returns 0.
+int setLogPath(const char* absolutePath);
 
 }  // namespace BEEPING
 

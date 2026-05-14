@@ -6,7 +6,7 @@ on, and how to recover when something breaks.
 
 ## TL;DR
 
-```
+```text
 develop  →  PR (merge commit)  →  main
                                    │
                                    ▼
@@ -100,11 +100,13 @@ token, so the workflow chain was suppressed.
 2. Check the run logs of `release-please.yml` for `releaseCreated` /
    `tagName` outputs and confirm the action is using the app token.
 3. **Manual recovery:**
+
    ```bash
    git fetch --tags origin
    git push origin --delete vX.Y.Z   # remove the tag pushed by GITHUB_TOKEN
    git push origin vX.Y.Z            # re-push from your local; fires release.yml
    ```
+
 4. After recovery, fix the workflow so it does not happen again.
 
 ### Symptom: release-please targets the wrong branch

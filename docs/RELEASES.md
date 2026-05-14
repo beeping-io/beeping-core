@@ -19,7 +19,7 @@
 Each release also includes:
 
 - `SHA256SUMS.txt` — integrity checksums
-- `<artifact>.sig` — cosign keyless signature
+- `<artifact>.cosign.bundle` — cosign keyless bundle (cert + sig + Rekor entry)
 
 ## Verify integrity
 
@@ -36,9 +36,9 @@ shasum -a 256 -c SHA256SUMS.txt --ignore-missing
 
 ```bash
 cosign verify-blob \
+  --bundle beeping-core-macos-universal.tar.zst.cosign.bundle \
   --certificate-identity-regexp "https://github.com/beeping-io/beeping-core/.github/workflows/release.yml@.*" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-  --signature beeping-core-macos-universal.tar.zst.sig \
   beeping-core-macos-universal.tar.zst
 ```
 
