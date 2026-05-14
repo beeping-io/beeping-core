@@ -14,26 +14,27 @@
 #include <BeepingCoreLib_api.h>
 
 #include <catch2/catch_test_macros.hpp>
+#include <atomic>
 #include <cstdio>
 #include <cstdlib>
+#include <filesystem>
 #include <string>
-#include <sys/stat.h>
-#include <unistd.h>
 
 namespace {
 
 bool fileExists(const std::string& path) {
-  struct stat st;
-  return ::stat(path.c_str(), &st) == 0;
+  std::error_code ec;
+  return std::filesystem::exists(path, ec);
 }
 
 std::string uniqueTempLogPath() {
-  const char* tmpdir = std::getenv("TMPDIR");
-  if (!tmpdir) tmpdir = "/tmp";
-  char buf[256] = {};
-  std::snprintf(buf, sizeof(buf), "%s/beeping-test-%d-%ld.log", tmpdir,
-                static_cast<int>(getpid()), static_cast<long>(rand()));
-  return buf;
+  static std::atomic<int> counter{0};
+  const auto tmpdir = std::filesystem::temp_directory_path();
+  const int n = counter.fetch_add(1);
+  char name[64] = {};
+  std::snprintf(name, sizeof(name), "beeping-test-%d-%d.log",
+                static_cast<int>(std::rand()), n);
+  return (tmpdir / name).string();
 }
 
 }  // namespace
