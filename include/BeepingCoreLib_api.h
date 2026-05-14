@@ -300,12 +300,26 @@ BEEPING_DLLEXPORT int32_t BEEPING_DecodeAudioBuffer(float* audioBuffer,
 /**
  * @brief Retrieve the last decoded string.
  *
+ * Safe to call at any point — if no complete word has been decoded yet
+ * the function returns 0 and writes a NUL byte at `stringDecoded[0]`.
+ * (Older versions could SIGSEGV here; see BEE-2228.) Callers that drive
+ * decoding via BEEPING_DecodeAudioBuffer should still typically wait for
+ * a `-3` return code (DECODE_COMPLETE) before calling this method.
+ *
+ * Wire format: when data is available, the decoder writes 9 chars in the
+ * `[0-9a-v]` base-32 alphabet — the 5-char user payload followed by a
+ * 4-char trailer (timestamp tag for scheduler-encoded streams, or zero
+ * padding otherwise). Callers that only want the user payload should
+ * truncate to the first 5 chars; callers using
+ * BEEPING_EncodeWithSchedule() can split via
+ * BEEPING_ParseScheduledPayload() instead.
+ *
  * @param[out] stringDecoded Buffer for the decoded characters (caller
  *        provides — recommended size 30).
  * @param beepingObject Handle from BEEPING_Create().
- * @return 0 if no data available, positive with length on valid data,
- *         negative with length magnitude if the data failed integrity
- *         checks.
+ * @return 0 if no data available, positive with length (typically 9) on
+ *         valid data, negative with length magnitude if the data failed
+ *         integrity checks.
  */
 BEEPING_DLLEXPORT int32_t BEEPING_GetDecodedData(char* stringDecoded,
                                                  void* beepingObject);

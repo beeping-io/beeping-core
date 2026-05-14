@@ -311,6 +311,13 @@ int DecoderAllMultiTone::DecodeAudioBuffer(float* audioBuffer, int size) {
 }
 
 int DecoderAllMultiTone::GetDecodedData(char* stringDecoded) {
+  // BEE-2228: guard against polling before DECODE_COMPLETE (same fix as
+  // DecoderNonAudibleMultiTone).
+  if (static_cast<int>(mDecodedValues.size()) < Globals::numTotalTokens) {
+    if (stringDecoded) stringDecoded[0] = '\0';
+    return 0;
+  }
+
   int messageOk = 1;
   // init ReedSolomon functions (set message length)
 
