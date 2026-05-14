@@ -10,9 +10,9 @@ Each release includes:
 | Artifact | Purpose |
 |---|---|
 | `beeping-core-<target>.tar.zst` | Compiled binary for the target platform |
-| `beeping-core-<target>.tar.zst.sig` | Cosign keyless signature |
+| `beeping-core-<target>.tar.zst.cosign.bundle` | Cosign keyless bundle (cert + sig + Rekor entry) |
 | `beeping-core-sbom.cdx.json` | CycloneDX Software Bill of Materials |
-| `beeping-core-sbom.cdx.json.sig` | Cosign signature for the SBOM |
+| `beeping-core-sbom.cdx.json.cosign.bundle` | Cosign keyless bundle for the SBOM |
 | `beeping-core.intoto.jsonl` | SLSA L3 provenance (one file per release) |
 | `SHA256SUMS.txt` | Integrity checksums for every artifact |
 
@@ -61,19 +61,20 @@ chmod +x cosign-linux-amd64 && sudo mv cosign-linux-amd64 /usr/local/bin/cosign
 ### Verify a binary
 
 ```bash
-curl -LO https://github.com/beeping-io/beeping-core/releases/download/$RELEASE/$ARTIFACT.sig
+curl -LO https://github.com/beeping-io/beeping-core/releases/download/$RELEASE/$ARTIFACT.cosign.bundle
 
 cosign verify-blob \
+  --bundle $ARTIFACT.cosign.bundle \
   --certificate-identity-regexp "^https://github.com/beeping-io/beeping-core/\\.github/workflows/release\\.yml@" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-  --signature $ARTIFACT.sig \
   $ARTIFACT
 
 # Expected: Verified OK
 ```
 
-The signature is tied to the exact GitHub Actions workflow that produced
-the binary. There are no long-lived signing keys — cosign uses a short-lived
+The bundle embeds the signing certificate and the Rekor transparency-log
+entry, so this single file is everything a downstream consumer needs to
+verify. There are no long-lived signing keys — cosign uses a short-lived
 OIDC token from GitHub Actions.
 
 ### Verify the SBOM
@@ -82,9 +83,9 @@ Same flow, with the SBOM file:
 
 ```bash
 cosign verify-blob \
+  --bundle beeping-core-sbom.cdx.json.cosign.bundle \
   --certificate-identity-regexp "^https://github.com/beeping-io/beeping-core/\\.github/workflows/release\\.yml@" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-  --signature beeping-core-sbom.cdx.json.sig \
   beeping-core-sbom.cdx.json
 ```
 
@@ -173,22 +174,22 @@ RELEASE="${1:-v1.0.0}"
 ARTIFACT="${2:-beeping-core-macos-universal.tar.zst}"
 BASE="https://github.com/beeping-io/beeping-core/releases/download/$RELEASE"
 
-echo "→ Downloading artifact, signature, checksums, provenance, SBOM"
+echo "→ Downloading artifact, bundle, checksums, provenance, SBOM"
 curl -sLO "$BASE/$ARTIFACT"
-curl -sLO "$BASE/$ARTIFACT.sig"
+curl -sLO "$BASE/$ARTIFACT.cosign.bundle"
 curl -sLO "$BASE/SHA256SUMS.txt"
 curl -sLO "$BASE/beeping-core.intoto.jsonl"
 curl -sLO "$BASE/beeping-core-sbom.cdx.json"
-curl -sLO "$BASE/beeping-core-sbom.cdx.json.sig"
+curl -sLO "$BASE/beeping-core-sbom.cdx.json.cosign.bundle"
 
 echo "→ 1/3 SHA256 integrity"
 shasum -a 256 -c SHA256SUMS.txt --ignore-missing
 
 echo "→ 2/3 Cosign signature"
 cosign verify-blob \
+  --bundle "$ARTIFACT.cosign.bundle" \
   --certificate-identity-regexp "^https://github.com/beeping-io/beeping-core/\\.github/workflows/release\\.yml@" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-  --signature "$ARTIFACT.sig" \
   "$ARTIFACT"
 
 echo "→ 3/3 SLSA provenance"
@@ -218,13 +219,13 @@ Verify locally with `lipo` (bundled with Xcode) and `plutil`:
 RELEASE=v1.0.0
 ARTIFACT=beeping-core-ios-xcframework.tar.zst
 curl -LO https://github.com/beeping-io/beeping-core/releases/download/$RELEASE/$ARTIFACT
-curl -LO https://github.com/beeping-io/beeping-core/releases/download/$RELEASE/$ARTIFACT.sig
+curl -LO https://github.com/beeping-io/beeping-core/releases/download/$RELEASE/$ARTIFACT.cosign.bundle
 
 # (Recommended) cosign verify first — same flow as section 2
 cosign verify-blob \
+  --bundle $ARTIFACT.cosign.bundle \
   --certificate-identity-regexp "^https://github.com/beeping-io/beeping-core/\\.github/workflows/release\\.yml@" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-  --signature $ARTIFACT.sig \
   $ARTIFACT
 
 # Extract + inspect
@@ -281,13 +282,13 @@ with `-Wl,-z,max-page-size=16384`, but you can re-confirm it locally with
 ABI=arm64-v8a   # or armeabi-v7a, x86_64
 ARTIFACT=beeping-core-android-$ABI.tar.zst
 curl -LO https://github.com/beeping-io/beeping-core/releases/download/$RELEASE/$ARTIFACT
-curl -LO https://github.com/beeping-io/beeping-core/releases/download/$RELEASE/$ARTIFACT.sig
+curl -LO https://github.com/beeping-io/beeping-core/releases/download/$RELEASE/$ARTIFACT.cosign.bundle
 
 # 2. (Recommended) verify cosign signature first — same flow as section 2
 cosign verify-blob \
+  --bundle $ARTIFACT.cosign.bundle \
   --certificate-identity-regexp "^https://github.com/beeping-io/beeping-core/\\.github/workflows/release\\.yml@" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-  --signature $ARTIFACT.sig \
   $ARTIFACT
 
 # 3. Extract and inspect ELF program headers

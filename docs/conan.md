@@ -186,9 +186,9 @@ All published binaries are signed with **cosign keyless** and carry
 
 ```bash
 cosign verify-blob \
+  --bundle beeping-core-macos-universal.tar.zst.cosign.bundle \
   --certificate-identity-regexp "^https://github.com/beeping-io/beeping-core/\\.github/workflows/release\\.yml@" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-  --signature beeping-core-macos-universal.tar.zst.sig \
   beeping-core-macos-universal.tar.zst
 ```
 
