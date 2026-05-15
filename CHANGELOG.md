@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.8.1](https://github.com/beeping-io/beeping-core/compare/v0.8.0...v0.8.1) (2026-05-15)
+
+
+* release 0.8.1 ([#35](https://github.com/beeping-io/beeping-core/issues/35)) ([5b22d03](https://github.com/beeping-io/beeping-core/commit/5b22d036924fe8c5cc9f35500fd8bb6947e80dfa))
+
 ## [0.8.0](https://github.com/beeping-io/beeping-core/compare/v0.7.0...v0.8.0) (2026-05-09)
 
 
