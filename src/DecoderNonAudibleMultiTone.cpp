@@ -199,6 +199,15 @@ int DecoderNonAudibleMultiTone::DecodeAudioBuffer(float* audioBuffer,
 }
 
 int DecoderNonAudibleMultiTone::GetDecodedData(char* stringDecoded) {
+  // BEE-2228: bail out before touching mDecodedValues / mReedSolomon if no
+  // complete word has been decoded yet. Callers that poll this method
+  // before DECODE_COMPLETE used to hit SIGSEGV in ReedSolomon::SetCode
+  // dereferencing an empty vector.
+  if (static_cast<int>(mDecodedValues.size()) < Globals::numTotalTokens) {
+    if (stringDecoded) stringDecoded[0] = '\0';
+    return 0;
+  }
+
   int messageOk = 1;
   // init ReedSolomon functions (set message length)
 

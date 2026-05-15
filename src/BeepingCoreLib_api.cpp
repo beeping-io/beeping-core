@@ -7,14 +7,17 @@
 #include <EncoderAudibleMultiTone.h>
 #include <EncoderNonAudibleMultiTone.h>
 #include <Globals.h>
+#include <Scheduler.h>
 #include <stdio.h>
 #include <string.h>
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <cstddef>
 #include <ctime>
 #include <iostream>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -151,6 +154,13 @@ extern "C"
 
   BINFO("BEEPING_Configure -> 0 (windowSize={})", beeping->mWindowSize);
   return 0;
+}
+
+#ifdef __cplusplus
+extern "C"
+#endif  //__cplusplus
+    int32_t BEEPING_SetLogPath(const char* absolutePath) {
+  return BEEPING::setLogPath(absolutePath);
 }
 
 #ifdef __cplusplus
@@ -318,4 +328,179 @@ extern "C"
   float result = beeping->mDecoder->GetDecodingEndFreq();
   BTRACE("BEEPING_GetDecodingEndFreq -> {:.1f}", result);
   return result;
+}
+
+#ifdef __cplusplus
+extern "C"
+#endif  //__cplusplus
+    int32_t BEEPING_ComputeBeepSchedule(float duration, float startTime,
+                                        float interval, double* outTimestamps,
+                                        int32_t maxTimestamps,
+                                        int32_t* outCount) {
+  BTRACE("BEEPING_ComputeBeepSchedule d={:.3f} s={:.3f} i={:.3f} max={}",
+         duration, startTime, interval, maxTimestamps);
+
+  if (duration < BEEPING::kMinBeepWindow || interval <= 0.0f ||
+      startTime < 0.0f ||
+      (startTime + BEEPING::kMinBeepWindow) > duration + 1e-6f) {
+    BERROR(
+        "BEEPING_ComputeBeepSchedule -> -2 (invalid params: d={:.3f} s={:.3f} "
+        "i={:.3f})",
+        duration, startTime, interval);
+    return -2;
+  }
+  if (maxTimestamps > 0 && outTimestamps == nullptr) {
+    BERROR("BEEPING_ComputeBeepSchedule -> -1 (null outTimestamps)");
+    return -1;
+  }
+
+  auto schedule = BEEPING::computeBeepSchedule(duration, startTime, interval);
+  const int32_t total = static_cast<int32_t>(schedule.size());
+  const int32_t toWrite = std::min(total, maxTimestamps);
+  for (int32_t i = 0; i < toWrite; ++i) {
+    outTimestamps[i] = schedule[static_cast<size_t>(i)];
+  }
+  if (outCount) *outCount = total;
+  BTRACE("BEEPING_ComputeBeepSchedule -> 0 (count={} written={})", total,
+         toWrite);
+  return 0;
+}
+
+#ifdef __cplusplus
+extern "C"
+#endif  //__cplusplus
+    int32_t BEEPING_GetScheduleBufferSize(float duration, void* beepingObject) {
+  if (!beepingObject) return -1;
+  BeepingContext* beeping = static_cast<BeepingContext*>(beepingObject);
+  if (duration <= 0.0f || beeping->mSampleRate <= 0.0f) return -2;
+  return static_cast<int32_t>(std::floor(duration * beeping->mSampleRate));
+}
+
+#ifdef __cplusplus
+extern "C"
+#endif  //__cplusplus
+    int32_t BEEPING_EncodeWithSchedule(
+        const char* code, int32_t codeSize, int32_t type, const char* melody,
+        int32_t melodySize, float duration, float startTime, float interval,
+        float beepGainDb, float* outBuffer, int32_t maxSamples,
+        int32_t* outSamplesWritten, void* beepingObject) {
+  if (!beepingObject) return -3;
+  BeepingContext* beeping = static_cast<BeepingContext*>(beepingObject);
+  if (!beeping->mEncoder) return -3;
+  if (!code || codeSize <= 0) return -2;
+  if (duration < BEEPING::kMinBeepWindow || interval <= 0.0f ||
+      startTime < 0.0f ||
+      (startTime + BEEPING::kMinBeepWindow) > duration + 1e-6f) {
+    return -2;
+  }
+
+  BINFO(
+      "BEEPING_EncodeWithSchedule code=\"{}\" d={:.3f} s={:.3f} i={:.3f} "
+      "gainDb={:.2f}",
+      std::string_view(code, codeSize), duration, startTime, interval,
+      beepGainDb);
+
+  const float sampleRate = beeping->mSampleRate;
+  const int32_t requiredSamples =
+      static_cast<int32_t>(std::floor(duration * sampleRate));
+
+  if (!outBuffer || maxSamples < requiredSamples) {
+    if (outSamplesWritten) *outSamplesWritten = requiredSamples;
+    return -1;
+  }
+
+  auto schedule = BEEPING::computeBeepSchedule(duration, startTime, interval);
+
+  std::fill(outBuffer, outBuffer + requiredSamples, 0.0f);
+
+  const float clampedDb = std::clamp(beepGainDb, -60.0f, 12.0f);
+  const float gainLinear = std::pow(10.0f, clampedDb / 20.0f);
+
+  const int bufferSize = beeping->mBufferSize > 0 ? beeping->mBufferSize : 128;
+  std::vector<float> tmpBuf(static_cast<size_t>(bufferSize));
+
+  for (double ts : schedule) {
+    const int tsSec = static_cast<int>(ts + 0.5);
+    std::string tsB32 = BEEPING::toBase32(tsSec);
+    while (tsB32.size() < 4) tsB32.insert(tsB32.begin(), '0');
+
+    std::string payload(code, static_cast<size_t>(codeSize));
+    payload += tsB32;
+
+    beeping->mEncoder->EncodeDataToAudioBuffer(
+        payload.c_str(), type, static_cast<int>(payload.size()), melody,
+        melodySize);
+
+    const int32_t offset = static_cast<int32_t>(std::floor(ts * sampleRate));
+    int32_t writePos = offset;
+    while (writePos < requiredSamples) {
+      const int32_t n = beeping->mEncoder->GetEncodedAudioBuffer(tmpBuf.data());
+      if (n <= 0) break;
+      const int32_t remaining = requiredSamples - writePos;
+      const int32_t toCopy = std::min(n, remaining);
+      for (int32_t k = 0; k < toCopy; ++k) {
+        outBuffer[writePos + k] = gainLinear * tmpBuf[static_cast<size_t>(k)];
+      }
+      writePos += n;
+      if (n < bufferSize) break;
+    }
+    beeping->mEncoder->ResetEncodedAudioBuffer();
+  }
+
+  if (outSamplesWritten) *outSamplesWritten = requiredSamples;
+  BTRACE("BEEPING_EncodeWithSchedule -> 0 (written={} beeps={})",
+         requiredSamples, schedule.size());
+  return 0;
+}
+
+#ifdef __cplusplus
+extern "C"
+#endif  //__cplusplus
+    int32_t BEEPING_ParseScheduledPayload(const char* payload,
+                                          int32_t payloadSize, char* outCode,
+                                          int32_t maxCodeSize,
+                                          int32_t* outCodeSize,
+                                          int32_t* outTimestampSec) {
+  const char* codeStart = nullptr;
+  int codeSize = 0;
+  int tsSec = 0;
+  if (!BEEPING::parseScheduledPayload(payload, payloadSize, &codeStart,
+                                      &codeSize, &tsSec)) {
+    return -2;
+  }
+  if (outCode) {
+    if (maxCodeSize <= codeSize) return -1;
+    std::memcpy(outCode, codeStart, static_cast<size_t>(codeSize));
+    outCode[codeSize] = '\0';
+  }
+  if (outCodeSize) *outCodeSize = codeSize;
+  if (outTimestampSec) *outTimestampSec = tsSec;
+  return 0;
+}
+
+#ifdef __cplusplus
+extern "C"
+#endif  //__cplusplus
+    int32_t BEEPING_GetDecodedScheduledPayload(char* outCode,
+                                               int32_t maxCodeSize,
+                                               int32_t* outCodeSize,
+                                               int32_t* outTimestampSec,
+                                               void* beepingObject) {
+  if (!beepingObject) return 0;
+  BeepingContext* beeping = static_cast<BeepingContext*>(beepingObject);
+  if (!beeping->mDecoder) return 0;
+
+  // Use a stack buffer large enough for the existing GetDecodedData
+  // recommendation (30 chars) plus headroom.
+  char raw[64] = {};
+  int32_t rc = beeping->mDecoder->GetDecodedData(raw);
+  if (rc == 0) return 0;
+
+  const int32_t payloadLen = std::abs(rc);
+  int32_t splitRc = BEEPING_ParseScheduledPayload(
+      raw, payloadLen, outCode, maxCodeSize, outCodeSize, outTimestampSec);
+  if (splitRc != 0) return -10;
+
+  BTRACE("BEEPING_GetDecodedScheduledPayload rc={} -> {}", rc, payloadLen);
+  return rc;
 }

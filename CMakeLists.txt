@@ -67,6 +67,7 @@ set(BEEPING_CORE_SOURCES
   src/DecoderNonAudibleMultiTone.cpp
   src/DecoderAllMultiTone.cpp
   src/Globals.cpp
+  src/Scheduler.cpp
   src/SpectralAnalysis.cpp
   src/ReedSolomon.cpp
 )
@@ -76,8 +77,11 @@ add_library(BeepingCore ${BEEPING_CORE_SOURCES})
 # Android JNI loads the library via System.loadLibrary("beepingcore") which
 # resolves to libbeepingcore.so. Force the output name to lowercase only on
 # Android so other platforms keep libBeepingCore.{a,so,dylib,dll} unchanged.
+# Also link against the NDK `log` library so spdlog's android_sink can call
+# __android_log_print() without an unresolved symbol at runtime.
 if(ANDROID)
   set_target_properties(BeepingCore PROPERTIES OUTPUT_NAME "beepingcore")
+  target_link_libraries(BeepingCore PRIVATE log)
 endif()
 
 target_include_directories(BeepingCore PUBLIC
@@ -208,6 +212,9 @@ if(BUILD_TESTING AND NOT EMSCRIPTEN)
     tests/UnitTests.cpp
     tests/RoundTripTests.cpp
     tests/ConcurrencyTests.cpp
+    tests/SchedulerTest.cpp
+    tests/LoggerTest.cpp
+    tests/CodecGuardTest.cpp
   )
   if(BEEPING_BUILD_CLI)
     list(APPEND BEEPING_TEST_SOURCES tests/CLIIntegrationTest.cpp)
