@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.8.1](https://github.com/beeping-io/beeping-core/compare/v0.8.0...v0.8.1) (2026-05-15)
+
+
+* release 0.8.1 ([#35](https://github.com/beeping-io/beeping-core/issues/35)) ([5b22d03](https://github.com/beeping-io/beeping-core/commit/5b22d036924fe8c5cc9f35500fd8bb6947e80dfa))
+
+## [0.8.0](https://github.com/beeping-io/beeping-core/compare/v0.7.0...v0.8.0) (2026-05-09)
+
+
+### ✨ Features
+
+* **ci:** BEE-2224 release-please uses GitHub App token ([#31](https://github.com/beeping-io/beeping-core/issues/31)) ([f30b688](https://github.com/beeping-io/beeping-core/commit/f30b688ee987b4c2065907acebfe3ccea0b49e70))
+
+## [0.7.0](https://github.com/beeping-io/beeping-core/compare/v0.6.0...v0.7.0) (2026-05-08)
+
+
+### ✨ Features
+
+* **release:** BEE-2221 Android NDK .so artifacts (16 KB pages) ([#24](https://github.com/beeping-io/beeping-core/issues/24)) ([9821519](https://github.com/beeping-io/beeping-core/commit/98215196af1e1fd0d0d1bb4ee351d602a1f97f56))
+* **release:** BEE-2223 publish iOS XCFramework with DWARF symbols ([#25](https://github.com/beeping-io/beeping-core/issues/25)) ([8bda2d1](https://github.com/beeping-io/beeping-core/commit/8bda2d18177e3dd1ac0e93dd68a98de0d537ad5a))
+
+
+### 🐛 Bug Fixes
+
+* **ci:** release-please pin target to main + sync manifest to v0.6.0 ([#28](https://github.com/beeping-io/beeping-core/issues/28)) ([21b2240](https://github.com/beeping-io/beeping-core/commit/21b2240c0c8ceb51836756bc4bffb82a289db73c))
+
 ## [0.1.0](https://github.com/beeping-io/beeping-core/compare/v0.0.0...v0.1.0) (2026-04-23)
 
 
