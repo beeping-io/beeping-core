@@ -196,6 +196,29 @@ Two supported consumption paths via Conan 2.x:
 
 Full guide with copy-paste examples: [`docs/conan.md`](docs/conan.md).
 
+## Community
+
+### Chat & support
+
+- 💬 **Discord** — [chat with the team and other developers](https://discord.gg/beeping)
+- 💼 **Slack** — coming soon (will be cross-bridged with Discord)
+- 🐛 **Issues** — [github.com/beeping-io/beeping-core/issues](https://github.com/beeping-io/beeping-core/issues) for bugs and feature requests
+
+### Follow us
+
+Social handles coming soon — see the issue tracker for status.
+
+- 🐦 X (Twitter) · 💼 LinkedIn · 📸 Instagram · 🎵 TikTok · 📺 YouTube · 🐘 Mastodon · 🦋 Bluesky
+
+### Project governance
+
+- 🛡️ **Security** — formal `SECURITY.md` disclosure policy is on the way; in the meantime, please email security at beeping dot io for vulnerability reports
+- 🤝 **Contributing** — formal `CONTRIBUTING.md` is on the way; the project uses conventional commits, semantic-release via `release-please`, and PRs against `develop`
+
+Beeping is built in the open. The library here is the C++20 foundation; SDK
+wrappers, the HTTP server and platform-native bindings live in the sibling
+repos of the [`beeping-io`](https://github.com/beeping-io) org.
+
 ## License
 
 [Apache-2.0](LICENSE)
