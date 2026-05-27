@@ -431,9 +431,7 @@ jobs:
   # ---------------------------------------------------------------------------
   # Linux compat smoke matrix — verify the linux-amd64 binary actually runs
   # on multiple glibc distros before allowing the release to publish.
-  # Alpine (musl) is intentionally excluded: BEE-1729 ships glibc-only.
-  # If demand for musl arises, a separate `beeping-core-linux-amd64-musl.tar.zst`
-  # variant will be added in its own task.
+  # Alpine (musl) lives in linux-musl-x64 / linux-musl-compat-smoke below.
   # ---------------------------------------------------------------------------
   linux-compat-smoke:
     name: Linux compat (${{ matrix.image }})
@@ -574,6 +572,140 @@ jobs:
               /opt/bin/beeping-core --version
               echo '✅ ${{ matrix.image }} arm64 OK'
             "
+
+  # ---------------------------------------------------------------------------
+  # Linux musl (Alpine) — amd64
+  #
+  # Built inside an alpine:3.20 container via `docker run` (NOT a job-level
+  # `container:`, which breaks JS actions like checkout/upload-artifact: the
+  # runner's bundled Node is glibc-linked and cannot exec under musl). Static
+  # libstdc++/libgcc keeps the binary self-contained; musl libc itself is
+  # dynamically linked and present on every Alpine host. spdlog is resolved via
+  # FetchContent (same as the glibc linux-amd64 job), so the container needs git.
+  # Unblocks Alpine Docker consumers of the server-side SDKs (beeping-node,
+  # beeping-python). BEE-2288.
+  # ---------------------------------------------------------------------------
+  linux-musl-x64:
+    name: Linux musl amd64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build + install in Alpine
+        run: |
+          docker run --rm \
+            -v "$PWD:/src" \
+            -w /src \
+            alpine:3.20 \
+            sh -c '
+              set -e
+              apk add --no-cache build-base cmake git zstd linux-headers
+              cmake -B build \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DBUILD_SHARED_LIBS=OFF \
+                -DBUILD_TESTING=OFF \
+                -DBEEPING_BUILD_CLI=ON \
+                -DCMAKE_EXE_LINKER_FLAGS="-static-libgcc -static-libstdc++" \
+                -DCMAKE_INSTALL_PREFIX=install
+              cmake --build build --config Release -j"$(nproc)"
+              cmake --install build
+            '
+
+      - name: Verify musl linkage + smoke-test CLI
+        run: |
+          docker run --rm \
+            -v "$PWD:/src" \
+            -w /src \
+            alpine:3.20 \
+            sh -c '
+              set -e
+              apk add --no-cache file
+              file install/bin/beeping-core
+              ldd install/bin/beeping-core || true
+              # The binary must be musl-linked; ld-linux* is the glibc loader.
+              if ldd install/bin/beeping-core 2>&1 | grep -q "ld-linux"; then
+                echo "::error::binary is glibc-linked, expected musl"; exit 1
+              fi
+              echo "✅ musl-linked"
+              install/bin/beeping-core --help
+              install/bin/beeping-core --version
+            '
+
+      - name: Package
+        run: |
+          docker run --rm \
+            -v "$PWD:/src" \
+            -w /src \
+            alpine:3.20 \
+            sh -c '
+              set -e
+              # GNU tar (apk add tar) is required for --zstd; BusyBox tar lacks it.
+              apk add --no-cache tar zstd
+              cd install
+              tar --zstd -cf ../beeping-core-linux-amd64-musl.tar.zst .
+              cd ..
+              sha256sum beeping-core-linux-amd64-musl.tar.zst > beeping-core-linux-amd64-musl.sha256
+            '
+
+      - name: Verify CLI in tarball (Alpine)
+        run: |
+          docker run --rm \
+            -v "$PWD:/src" \
+            -w /src \
+            alpine:3.20 \
+            sh -c '
+              set -e
+              apk add --no-cache tar zstd
+              mkdir -p verify
+              tar --zstd -xf beeping-core-linux-amd64-musl.tar.zst -C verify
+              test -x verify/bin/beeping-core || { echo "❌ CLI binary missing in packaged tarball"; exit 1; }
+              verify/bin/beeping-core --help
+            '
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: beeping-core-linux-amd64-musl
+          path: |
+            beeping-core-linux-amd64-musl.tar.zst
+            beeping-core-linux-amd64-musl.sha256
+
+  # ---------------------------------------------------------------------------
+  # Linux musl compat smoke matrix — verify the musl binary actually runs on a
+  # spread of Alpine releases before allowing the release to publish. Mirrors
+  # linux-compat-smoke (glibc) but for musl hosts.
+  # ---------------------------------------------------------------------------
+  linux-musl-compat-smoke:
+    name: Linux musl compat (${{ matrix.image }})
+    needs: [linux-musl-x64]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - alpine:3.18
+          - alpine:3.19
+          - alpine:3.20
+          - alpine:edge
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: beeping-core-linux-amd64-musl
+          path: artifact
+
+      - name: Smoke test musl binary in ${{ matrix.image }}
+        run: |
+          docker run --rm \
+            -v "$PWD/artifact:/release:ro" \
+            ${{ matrix.image }} \
+            sh -c '
+              set -e
+              apk add --no-cache tar zstd
+              mkdir -p /opt/beeping
+              tar --zstd -xf /release/beeping-core-linux-amd64-musl.tar.zst -C /opt/beeping
+              /opt/beeping/bin/beeping-core --help
+              /opt/beeping/bin/beeping-core --version
+              echo "✅ ${{ matrix.image }} musl OK"
+            '
 
   # ---------------------------------------------------------------------------
   # Android NDK — arm64-v8a, armeabi-v7a, x86_64
@@ -990,7 +1122,7 @@ jobs:
   # ---------------------------------------------------------------------------
   hashes:
     name: Compute artifact hashes
-    needs: [macos, linux-amd64, linux-compat-smoke, linux-arm64, linux-arm64-compat-smoke, windows-x64, windows-arm64, android, android-smoke, ios, ios-smoke, wasm, sbom]
+    needs: [macos, linux-amd64, linux-compat-smoke, linux-arm64, linux-arm64-compat-smoke, linux-musl-x64, linux-musl-compat-smoke, windows-x64, windows-arm64, android, android-smoke, ios, ios-smoke, wasm, sbom]
     runs-on: ubuntu-latest
     outputs:
       hashes: ${{ steps.compute.outputs.hashes }}
@@ -1030,7 +1162,7 @@ jobs:
   # ---------------------------------------------------------------------------
   release:
     name: Publish GitHub Release
-    needs: [macos, linux-amd64, linux-compat-smoke, linux-arm64, linux-arm64-compat-smoke, windows-x64, windows-arm64, android, android-smoke, ios, ios-smoke, wasm, sbom]
+    needs: [macos, linux-amd64, linux-compat-smoke, linux-arm64, linux-arm64-compat-smoke, linux-musl-x64, linux-musl-compat-smoke, windows-x64, windows-arm64, android, android-smoke, ios, ios-smoke, wasm, sbom]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:

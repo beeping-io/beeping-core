@@ -8,8 +8,9 @@
 | Target | Archs | Artifact |
 |---|---|---|
 | 🍎 macOS | arm64 + x86_64 universal | `beeping-core-macos-universal.tar.zst` |
-| 🐧 Linux | amd64 | `beeping-core-linux-amd64.tar.zst` |
-| 🐧 Linux | arm64 | `beeping-core-linux-arm64.tar.zst` |
+| 🐧 Linux (glibc) | amd64 | `beeping-core-linux-amd64.tar.zst` |
+| 🐧 Linux (glibc) | arm64 | `beeping-core-linux-arm64.tar.zst` |
+| 🐧 Linux (musl / Alpine) | amd64 | `beeping-core-linux-amd64-musl.tar.zst` |
 | 🤖 Android NDK | arm64-v8a (16 KB pages, minSdk 24) | `beeping-core-android-arm64-v8a.tar.zst` |
 | 🤖 Android NDK | armeabi-v7a (16 KB pages, minSdk 24) | `beeping-core-android-armeabi-v7a.tar.zst` |
 | 🤖 Android NDK | x86_64 (16 KB pages, minSdk 24) | `beeping-core-android-x86_64.tar.zst` |
