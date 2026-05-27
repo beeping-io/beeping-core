@@ -7,6 +7,7 @@
 #include <math.h>
 #include <string.h>
 
+#include <algorithm>  // std::max
 #include <cstdio>
 #include <numeric>  //accumulate
 #include <vector>
@@ -44,7 +45,15 @@ Decoder::Decoder(const BeepingConfig& config, float samplingRate, int buffSize,
 
   mReadPosInFrameCircularBuffer = 0;
   mWritePosInFrameCircularBuffer = 0;
-  mSizeFrameCircularBuffer = mSpectralAnalysis->mWindowSize * 4;
+  // The frame buffer must hold one full input chunk (mBufferSize) plus a window
+  // of margin: DecodeAudioBuffer drains all complete windows per call, leaving
+  // < windowSize residual, then the next call writes up to mBufferSize more.
+  // Sizing only at windowSize*4 overflowed when bufferSize > windowSize (the
+  // write lapped the unread read pointer), silently corrupting the payload —
+  // BEE-2249. The windowSize*4 floor preserves the original headroom for the
+  // common bufferSize <= windowSize case.
+  mSizeFrameCircularBuffer = std::max(mSpectralAnalysis->mWindowSize * 4,
+                                      mBufferSize + mWindowSize * 2);
   mCircularBufferFloat = new float[mSizeFrameCircularBuffer];
   memset(mCircularBufferFloat, 0, mSizeFrameCircularBuffer * sizeof(float));
   mAnalBufferFloat = new float[mSpectralAnalysis->mWindowSize];
