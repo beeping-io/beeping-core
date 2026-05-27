@@ -122,8 +122,15 @@ int DecoderAudibleMultiTone::DecodeAudioBuffer(float* audioBuffer, int size) {
   mWritePosInFrameCircularBuffer =
       (size + mWritePosInFrameCircularBuffer) % (mSizeFrameCircularBuffer);
 
-  // if enough data filled (mBufferSize), then send to decode library
-
+  // Drain every complete window available this call instead of returning on the
+  // first event. With bufferSize > windowSize a single call writes more than
+  // one window, so an early return left the surplus undrained; across calls the
+  // residual accumulated until it lapped the read pointer and corrupted the
+  // payload (BEE-2249). Draining fully keeps the residual below windowSize, so
+  // the latest non-terminal event is latched and reported, while WORD COMPLETE
+  // (-3) still returns immediately so the caller can read the word and the
+  // remaining samples persist for the next call.
+  int result = -1;
   while (getSizeFilledFrameCircularBuffer() >=
          sizeWindow) {  // copy from circularBufferFloat to sendBuffer
     for (i = 0; i < sizeWindow; i++)
@@ -151,8 +158,7 @@ int DecoderAudibleMultiTone::DecodeAudioBuffer(float* audioBuffer, int size) {
 
         BINFO(
             "DecoderAudibleMultiTone::DecodeAudioBuffer START TOKEN DETECTED");
-        BTRACE("DecoderAudibleMultiTone::DecodeAudioBuffer -> {}", -2);
-        return -2;  //-2 means start token found
+        result = -2;  //-2 means start token found
       }
     } else if ((mDecoding > 0) &&
                (mDecoding <=
@@ -167,8 +173,7 @@ int DecoderAudibleMultiTone::DecodeAudioBuffer(float* audioBuffer, int size) {
             "DecoderAudibleMultiTone::DecodeAudioBuffer token decoded idx={} "
             "char='{}'",
             ret, Globals::getCharFromIdx(ret));
-        BTRACE("DecoderAudibleMultiTone::DecodeAudioBuffer -> {}", ret);
-        return ret;
+        result = ret;
       }
     } else if (mDecoding >
                Globals::numMessageTokens)  // we have finished decoding a
@@ -189,7 +194,8 @@ int DecoderAudibleMultiTone::DecodeAudioBuffer(float* audioBuffer, int size) {
     }
   }
 
-  return -1;
+  BTRACE("DecoderAudibleMultiTone::DecodeAudioBuffer -> {}", result);
+  return result;
 }
 
 int DecoderAudibleMultiTone::GetDecodedData(char* stringDecoded) {
