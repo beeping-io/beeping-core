@@ -101,7 +101,7 @@ static constexpr const char* kPayload = "123456789";
 // BEE-2249 (bufferSize > windowSize corrupted the payload).
 // ===========================================================================
 
-TEST_CASE("RoundTrip matrix (rate × mode × bufferSize)", "[roundtrip]") {
+TEST_CASE("RoundTrip matrix (rate x mode x bufferSize)", "[roundtrip]") {
   float sampleRate =
       GENERATE(22050.0f, 24000.0f, 32000.0f, 44100.0f, 48000.0f, 96000.0f);
 
