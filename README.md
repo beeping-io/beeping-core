@@ -219,6 +219,16 @@ Beeping is built in the open. The library here is the C++20 foundation; SDK
 wrappers, the HTTP server and platform-native bindings live in the sibling
 repos of the [`beeping-io`](https://github.com/beeping-io) org.
 
+## 💬 Community
+
+Have a question, idea or showcase? Three places to talk:
+
+- **GitHub Discussions** — async forum, indexable: <https://github.com/beeping-io/.github/discussions>
+- **Slack** — real-time chat: [join the workspace](https://join.slack.com/t/beeping-io/shared_invite/zt-3yv2kc6qs-tWxx1AViHgdEembSPqm26Q)
+- **Discord** — same channels, Discord flavour: <https://discord.gg/XNPXdZK7>
+
+Code of Conduct (Contributor Covenant 2.1): <https://github.com/beeping-io/.github/blob/main/CODE_OF_CONDUCT.md>
+
 ## License
 
 [Apache-2.0](LICENSE)
