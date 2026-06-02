@@ -29,7 +29,7 @@ The ConanCenter recipe is currently in review. Track progress at:
 
 ```ini
 [requires]
-beeping-core/0.0.0
+beeping-core/0.8.1
 
 [generators]
 CMakeDeps
@@ -46,7 +46,7 @@ class MyApp(ConanFile):
     generators = "CMakeDeps", "CMakeToolchain"
 
     def requirements(self):
-        self.requires("beeping-core/0.0.0")
+        self.requires("beeping-core/0.8.1")
 ```
 
 ### Install + build
@@ -72,7 +72,7 @@ and WASM. See [docs/verifying-releases.md](verifying-releases.md) for
 download + cryptographic verification.
 
 ```bash
-RELEASE=v0.0.0
+RELEASE=v0.8.1
 ARTIFACT=beeping-core-macos-universal.tar.zst
 
 curl -LO https://github.com/beeping-io/beeping-core/releases/download/$RELEASE/$ARTIFACT
@@ -105,19 +105,19 @@ class MyApp(ConanFile):
 
     def requirements(self):
         # Reference resolved from local recipe (option 1) or git (option 2)
-        self.requires("beeping-core/0.0.0@beeping/stable")
+        self.requires("beeping-core/0.8.1@beeping/stable")
 ```
 
 Export the recipe locally from a clone of beeping-core:
 
 ```bash
-git clone --depth=1 --branch v0.0.0 https://github.com/beeping-io/beeping-core.git
+git clone --depth=1 --branch v0.8.1 https://github.com/beeping-io/beeping-core.git
 cd beeping-core
-conan export recipe/all --version=0.0.0 --user=beeping --channel=stable
+conan export recipe/all --version=0.8.1 --user=beeping --channel=stable
 ```
 
 Now `conan install .` in your project resolves
-`beeping-core/0.0.0@beeping/stable` from your local cache, builds it once,
+`beeping-core/0.8.1@beeping/stable` from your local cache, builds it once,
 and reuses the binary across builds.
 
 ### 2c — Custom Conan remote (planned)
@@ -164,15 +164,15 @@ The target `BeepingCore::BeepingCore` carries:
 When the ConanCenter recipe is merged, switch is a one-line change:
 
 ```diff
--self.requires("beeping-core/0.0.0@beeping/stable")
-+self.requires("beeping-core/0.0.0")
+-self.requires("beeping-core/0.8.1@beeping/stable")
++self.requires("beeping-core/0.8.1")
 ```
 
 Or in `conanfile.txt`:
 
 ```diff
--beeping-core/0.0.0@beeping/stable
-+beeping-core/0.0.0
+-beeping-core/0.8.1@beeping/stable
++beeping-core/0.8.1
 ```
 
 No code changes required. Same headers, same target, same ABI.
@@ -226,7 +226,7 @@ SBOM is also published per release.
 
 ### Can I pin a specific commit instead of a tag?
 
-Yes, with method 2b. Replace `--branch v0.0.0` in the `git clone` with
+Yes, with method 2b. Replace `--branch v0.8.1` in the `git clone` with
 `--branch <commit-sha>` and adjust the version string. Note that
 ConanCenter recipes only accept tagged versions.
 
