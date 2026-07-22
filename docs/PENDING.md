@@ -54,4 +54,37 @@ Usa el skill `/pending` (recomendado). O copia este bloque al final del fichero:
 
 ## 🗂️ Pendientes registrados
 
-> _Aún no hay pendings. Añade el primero con `/pending`._
+### ⏳ pending-001 — 📉 `BEEPING_GetConfidence` devuelve el valor sin normalizar
+
+- 📅 **Fecha añadida**: 2026-07-22
+- 🏷️ **Tipo**: fix
+- 🧭 **Trigger**: encontrado durante el Human QA Checkpoint de BEE-92 (`beeping_flutter`). En pantalla salen confianzas **negativas** (`-31%`), imposibles según el contrato publicado.
+- ⚙️ **Acción requerida**: en `src/BeepingCoreLib_api.cpp`,
+
+  ```cpp
+  // return (beeping->mDecoder->GetConfidence()/2.f)+0.5f;   ← normalización comentada
+  float result = beeping->mDecoder->GetConfidence();          ← valor crudo
+  ```
+
+  La línea comentada mapeaba `[-1, 1]` → `[0, 1]`. Está desactivada y se devuelve el valor crudo, mientras `include/BeepingCoreLib_api.h` documenta *"Combined reception-quality score (0.0 poor — 1.0 ideal)"*.
+
+  Decidir cuál de los dos es el contrato bueno y alinear el otro — **no basta con descomentar**: hay que confirmar que el rango real de `mDecoder->GetConfidence()` es `[-1, 1]` y revisar `GetConfidenceError` / `GetConfidenceNoise`, que documentan el mismo rango y pueden tener el mismo problema. Añadir test que fije el rango.
+
+  Aguas arriba todo confía en el contrato documentado: `BeepingPayload.confidence` (Swift), el `confidence` del `platform_interface` en Dart (`[0.0, 1.0]`) y el `*100` del example.
+
+- 🚧 **Bloqueado por**: nada
+- 🚦 **Estado**: 🆕 Nuevo
+
+### ⏳ pending-002 — 👻 El decoder emite falsos positivos sobre ruido
+
+- 📅 **Fecha añadida**: 2026-07-22
+- 🏷️ **Tipo**: fix
+- 🧭 **Trigger**: encontrado durante el Human QA Checkpoint de BEE-92. Con la app en `listening…` y **sin emitir nada**, la lista `heard` se llena de entradas `000000000` con la confianza bailando.
+- ⚙️ **Acción requerida**: investigar por qué el decoder emite tokens de fin (`-3`) sobre ruido ambiente. Descartado que sea de las capas de arriba: el callback de captura en `beeping-ios/BeepingC.mm` filtra correctamente y solo reenvía los tokens `-2` (inicio) y `-3` (fin); todo lo demás (`>= 0` parcial, `-1` sin datos) se ignora. Y nueve ceros son un payload base32 válido de 9 chars, así que ninguna validación aguas arriba lo descarta.
+
+  Mirar el umbral de detección y si `GetDecodedData` debería devolver estado de fallo en vez de una cadena de ceros.
+
+- 🚧 **Bloqueado por**: nada
+- 🚦 **Estado**: 🆕 Nuevo
+
+**Por qué importa**: si el decoder dispara sobre ruido, distinguir un payload real de la basura en el round-trip se vuelve difícil, y eso compromete la validación del QA humano. Pendiente de comprobar si con un beep real la señal domina lo suficiente.
