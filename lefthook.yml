@@ -1,0 +1,94 @@
+# ============================================================================
+# Lefthook — modern Git hooks manager (https://github.com/evilmartians/lefthook)
+# Repository: beeping-core (C++20 Data Over Sound DSP engine)
+# ============================================================================
+
+pre-commit:
+  parallel: true
+  commands:
+    # ─── Trailing whitespace cleanup ────────────────────────────────────────
+    trailing-whitespace:
+      tags: style
+      glob: "*.{cpp,hpp,c,h,cc,cmake,txt,yml,yaml,json,sh,md}"
+      run: |
+        for f in {staged_files}; do
+          if [ -f "$f" ]; then
+            sed -i.bak 's/[[:space:]]*$//' "$f" && rm -f "$f.bak"
+            git add "$f"
+          fi
+        done
+
+    # ─── End-of-file newline ────────────────────────────────────────────────
+    eof-newline:
+      tags: style
+      glob: "*.{cpp,hpp,c,h,cc,cmake,txt,yml,yaml,json,sh,md}"
+      run: |
+        for f in {staged_files}; do
+          if [ -f "$f" ] && [ -n "$(tail -c1 "$f" 2>/dev/null)" ]; then
+            printf '\n' >> "$f"
+            git add "$f"
+          fi
+        done
+
+    # ─── Block large files (>1 MB) ──────────────────────────────────────────
+    large-files:
+      tags: safety
+      run: |
+        max_size=1048576  # 1 MB
+        for f in {staged_files}; do
+          if [ -f "$f" ]; then
+            size=$(wc -c < "$f")
+            if [ "$size" -gt "$max_size" ]; then
+              echo "❌ $f exceeds 1 MB ($size bytes). Use Git LFS or reconsider committing this file."
+              exit 1
+            fi
+          fi
+        done
+
+    # ─── Secret scanning (gitleaks) ─────────────────────────────────────────
+    gitleaks:
+      tags: security
+      run: |
+        if command -v gitleaks >/dev/null 2>&1; then
+          gitleaks protect --staged --redact --verbose
+        else
+          echo "⚠️  gitleaks not installed — skipping secret scan. (Install: brew install gitleaks)"
+          exit 0
+        fi
+
+    # ─── C++ clang-format ───────────────────────────────────────────────────
+    clang-format:
+      tags: style
+      glob: "*.{cpp,hpp,c,h,cc}"
+      run: |
+        if command -v clang-format >/dev/null 2>&1; then
+          clang-format --dry-run --Werror {staged_files}
+        fi
+
+commit-msg:
+  commands:
+    commitlint:
+      tags: convention
+      run: |
+        if command -v commitlint >/dev/null 2>&1; then
+          commitlint --edit {1}
+        elif command -v npx >/dev/null 2>&1 && [ -f commitlint.config.mjs ]; then
+          npx --no-install commitlint --edit {1} 2>/dev/null || npx commitlint --edit {1}
+        else
+          echo "⚠️  commitlint not installed — skipping commit message lint."
+          exit 0
+        fi
+
+pre-push:
+  commands:
+    protect-base-branches:
+      tags: safety
+      run: |
+        protected="main develop"
+        current=$(git symbolic-ref --short HEAD 2>/dev/null || echo "DETACHED")
+        for branch in $protected; do
+          if [ "$current" = "$branch" ]; then
+            echo "❌ Direct push to '$branch' is blocked. Open a PR instead."
+            exit 1
+          fi
+        done
