@@ -112,10 +112,12 @@ size, const char *melodyString, int melodySize)
 //front-door symbols
 
 
-  //Add user symbols
-  for (int i=0;i<size;i++)
-  {
-    digits.push_back(Globals::getIdxFromChar(stringToEncode[i]));
+  // Add user symbols (clamped to numWordTokens to guarantee bounded frame size)
+  const int effectiveSize = std::min(size, Globals::numWordTokens);
+  for (int i = 0; i < effectiveSize; i++) {
+    int idx = Globals::getIdxFromChar(stringToEncode[i]);
+    if (idx < 0) idx = 0;
+    digits.push_back(idx);
   }
 
 //  __android_log_print(ANDROID_LOG_INFO, "BeepingCoreLibInfo", "Added digits");

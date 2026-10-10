@@ -37,7 +37,7 @@ class ReedSolomon {
 
   // Voctro API
   // encoding
-  void SetMessage(const std::vector<int> message);
+  bool SetMessage(const std::vector<int>& message);
   void GetCode(std::vector<int>& code);
   // decoding
   void SetCode(const std::vector<int> code);

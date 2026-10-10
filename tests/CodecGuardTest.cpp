@@ -8,8 +8,8 @@
 
 #include <BeepingCoreLib_api.h>
 
-#include <catch2/catch_test_macros.hpp>
 #include <algorithm>
+#include <catch2/catch_test_macros.hpp>
 #include <cstring>
 #include <string>
 #include <vector>
@@ -84,9 +84,8 @@ TEST_CASE(
   BEEPING_Destroy(core);
 }
 
-TEST_CASE(
-    "BEE-2228 guard: GetDecodedData survives all three decoder backends",
-    "[bee-2228][guard]") {
+TEST_CASE("BEE-2228 guard: GetDecodedData survives all three decoder backends",
+          "[bee-2228][guard]") {
   for (int mode :
        {BEEPING_MODE_AUDIBLE, BEEPING_MODE_INAUDIBLE, BEEPING_MODE_ALL}) {
     void* core = BEEPING_Create();
@@ -111,8 +110,7 @@ TEST_CASE(
   // already worked before BEE-2228 — pin it so a future scheduler refactor
   // does not silently break it.
   auto r = roundTrip(BEEPING_MODE_INAUDIBLE, 44100.0f, "abcde0002", 1024);
-  INFO("decoded=" << r.decoded << " rc=" << r.rc << " out=\"" << r.out
-                  << "\"");
+  INFO("decoded=" << r.decoded << " rc=" << r.rc << " out=\"" << r.out << "\"");
   REQUIRE(r.decoded == -3);
   REQUIRE(r.rc == 9);
   REQUIRE(r.out == "abcde0002");
@@ -127,9 +125,209 @@ TEST_CASE(
   // returns the same 5 chars followed by 4 trailing zeros. Callers that
   // want just the user payload must truncate to the first 5 chars.
   auto r = roundTrip(BEEPING_MODE_INAUDIBLE, 44100.0f, "abc12", 1024);
-  INFO("decoded=" << r.decoded << " rc=" << r.rc << " out=\"" << r.out
-                  << "\"");
+  INFO("decoded=" << r.decoded << " rc=" << r.rc << " out=\"" << r.out << "\"");
   REQUIRE(r.decoded == -3);
   REQUIRE(r.rc == 9);
   REQUIRE(r.out == "abc120000");
+}
+
+// -----------------------------------------------------------------------------
+// BEE-2354 / Issue #76 guards:
+// 1. ReedSolomon::SetMessage buffer overflow prevention (kk-1, kk, kk+1,
+// kk+50).
+// 2. BEEPING_EncodeDataToAudioBuffer public boundary validation (payload size &
+// chars).
+// 3. Sweep property test across 0..64 char payloads.
+// -----------------------------------------------------------------------------
+
+#include <Globals.h>
+#include <ReedSolomon.h>
+
+TEST_CASE(
+    "BEE-2354: ReedSolomon::SetMessage clamps capacity and prevents heap "
+    "overflow",
+    "[bee-2354][reedsolomon]") {
+  BEEPING::ReedSolomon rs;
+  const int kk = rs.kk;  // 23
+  REQUIRE(kk == 23);
+
+  SECTION("Empty message zeroes internal buffer and returns true") {
+    std::vector<int> emptyMsg;
+    bool ok = rs.SetMessage(emptyMsg);
+    REQUIRE(ok);
+    REQUIRE(rs.msg_len == 0);
+    for (int i = 0; i < kk; ++i) {
+      REQUIRE(rs.data[i] == 0);
+    }
+    // Encode and GetCode must not crash
+    rs.Encode();
+    std::vector<int> code;
+    rs.GetCode(code);
+    REQUIRE(code.size() == static_cast<size_t>(rs.nn - rs.kk));
+  }
+
+  SECTION(
+      "msg_len = kk - 1 (22 items): copies all, zero-pads last, returns true") {
+    std::vector<int> msg(kk - 1);
+    for (int i = 0; i < kk - 1; ++i) msg[i] = (i + 1) % 32;
+    bool ok = rs.SetMessage(msg);
+    REQUIRE(ok);
+    REQUIRE(rs.msg_len == kk - 1);
+    for (int i = 0; i < kk - 1; ++i) {
+      REQUIRE(rs.data[i] == (i + 1) % 32);
+    }
+    REQUIRE(rs.data[kk - 1] == 0);  // zero-padded
+
+    rs.Encode();
+    std::vector<int> code;
+    rs.GetCode(code);
+    REQUIRE(code.size() == static_cast<size_t>(kk - 1 + (rs.nn - rs.kk)));
+  }
+
+  SECTION("msg_len = kk (23 items): exact capacity, returns true") {
+    std::vector<int> msg(kk);
+    for (int i = 0; i < kk; ++i) msg[i] = (i + 1) % 32;
+    bool ok = rs.SetMessage(msg);
+    REQUIRE(ok);
+    REQUIRE(rs.msg_len == kk);
+    for (int i = 0; i < kk; ++i) {
+      REQUIRE(rs.data[i] == (i + 1) % 32);
+    }
+
+    rs.Encode();
+    std::vector<int> code;
+    rs.GetCode(code);
+    REQUIRE(code.size() == static_cast<size_t>(rs.nn));
+  }
+
+  SECTION(
+      "msg_len = kk + 1 (24 items): clamped to kk, returns false, NO "
+      "overflow") {
+    std::vector<int> msg(kk + 1);
+    for (int i = 0; i < kk + 1; ++i) msg[i] = (i + 1) % 32;
+    bool ok = rs.SetMessage(msg);
+    REQUIRE_FALSE(ok);
+    REQUIRE(rs.msg_len == kk);
+    for (int i = 0; i < kk; ++i) {
+      REQUIRE(rs.data[i] == (i + 1) % 32);
+    }
+
+    rs.Encode();
+    std::vector<int> code;
+    rs.GetCode(code);
+    REQUIRE(code.size() == static_cast<size_t>(rs.nn));
+  }
+
+  SECTION(
+      "msg_len = kk + 50 (73 items): clamped to kk, returns false, NO "
+      "overflow") {
+    std::vector<int> msg(kk + 50);
+    for (int i = 0; i < kk + 50; ++i) msg[i] = (i + 1) % 32;
+    bool ok = rs.SetMessage(msg);
+    REQUIRE_FALSE(ok);
+    REQUIRE(rs.msg_len == kk);
+    for (int i = 0; i < kk; ++i) {
+      REQUIRE(rs.data[i] == (i + 1) % 32);
+    }
+
+    rs.Encode();
+    std::vector<int> code;
+    rs.GetCode(code);
+    REQUIRE(code.size() == static_cast<size_t>(rs.nn));
+  }
+}
+
+TEST_CASE(
+    "BEE-2354: BEEPING_EncodeDataToAudioBuffer public boundary input "
+    "validation",
+    "[bee-2354][api]") {
+  void* enc = BEEPING_Create();
+  BEEPING_Configure(BEEPING_MODE_AUDIBLE, 44100.0f, 1024, enc);
+
+  SECTION("Rejects nullptr payload") {
+    int rc = BEEPING_EncodeDataToAudioBuffer(nullptr, 5, 0, nullptr, 0, enc);
+    REQUIRE(rc == -2);
+  }
+
+  SECTION("Rejects zero or negative size") {
+    int rc1 = BEEPING_EncodeDataToAudioBuffer("abcde", 0, 0, nullptr, 0, enc);
+    REQUIRE(rc1 == -2);
+    int rc2 = BEEPING_EncodeDataToAudioBuffer("abcde", -5, 0, nullptr, 0, enc);
+    REQUIRE(rc2 == -2);
+  }
+
+  SECTION("Rejects nullptr core handle") {
+    int rc =
+        BEEPING_EncodeDataToAudioBuffer("abcde", 5, 0, nullptr, 0, nullptr);
+    REQUIRE(rc == -1);
+  }
+
+  SECTION("Rejects payload size exceeding 9 (including 10, 20, 21, 50)") {
+    std::string s10 = "0123456789";
+    REQUIRE(BEEPING_EncodeDataToAudioBuffer(s10.c_str(), 10, 0, nullptr, 0,
+                                            enc) == -2);
+
+    std::string s20 = "01234567890123456789";
+    REQUIRE(BEEPING_EncodeDataToAudioBuffer(s20.c_str(), 20, 0, nullptr, 0,
+                                            enc) == -2);
+
+    std::string s21 = "012345678901234567890";
+    REQUIRE(BEEPING_EncodeDataToAudioBuffer(s21.c_str(), 21, 0, nullptr, 0,
+                                            enc) == -2);
+
+    std::string s50(50, 'a');
+    REQUIRE(BEEPING_EncodeDataToAudioBuffer(s50.c_str(), 50, 0, nullptr, 0,
+                                            enc) == -2);
+  }
+
+  SECTION("Rejects non-base32 characters") {
+    // Non-base32 chars: 'w', 'x', 'y', 'z', symbols
+    REQUIRE(BEEPING_EncodeDataToAudioBuffer("abcdw", 5, 0, nullptr, 0, enc) ==
+            -2);
+    REQUIRE(BEEPING_EncodeDataToAudioBuffer("abcdx", 5, 0, nullptr, 0, enc) ==
+            -2);
+    REQUIRE(BEEPING_EncodeDataToAudioBuffer("abcdz", 5, 0, nullptr, 0, enc) ==
+            -2);
+    REQUIRE(BEEPING_EncodeDataToAudioBuffer("abc!1", 5, 0, nullptr, 0, enc) ==
+            -2);
+    REQUIRE(BEEPING_EncodeDataToAudioBuffer("abc 1", 5, 0, nullptr, 0, enc) ==
+            -2);
+  }
+
+  SECTION("Accepts valid 5-char and 9-char payloads") {
+    int rc5 = BEEPING_EncodeDataToAudioBuffer("abcde", 5, 0, nullptr, 0, enc);
+    REQUIRE(rc5 > 0);
+
+    int rc9 =
+        BEEPING_EncodeDataToAudioBuffer("012345678", 9, 0, nullptr, 0, enc);
+    REQUIRE(rc9 > 0);
+  }
+
+  BEEPING_Destroy(enc);
+}
+
+TEST_CASE(
+    "BEE-2354: Property sweep across payload sizes 0..64 never corrupts memory",
+    "[bee-2354][property]") {
+  void* enc = BEEPING_Create();
+  BEEPING_Configure(BEEPING_MODE_AUDIBLE, 44100.0f, 1024, enc);
+
+  // Generate a valid base32 string of length 64
+  const char* base32Chars = "0123456789abcdefghijklmnopqrstuv";
+  std::string full64;
+  for (int i = 0; i < 64; ++i) {
+    full64.push_back(base32Chars[i % 32]);
+  }
+
+  for (int len = 0; len <= 64; ++len) {
+    int rc = BEEPING_EncodeDataToAudioBuffer(full64.c_str(), len, 0, nullptr, 0,
+                                             enc);
+    if (len >= 1 && len <= 9) {
+      REQUIRE(rc > 0);
+    } else {
+      REQUIRE(rc == -2);
+    }
+  }
+
+  BEEPING_Destroy(enc);
 }
