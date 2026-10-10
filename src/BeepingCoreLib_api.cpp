@@ -186,9 +186,32 @@ extern "C"
                                             const char* melodyString,
                                             int32_t melodySize,
                                             void* beepingObject) {
+  if (!beepingObject) return -1;
+  BeepingContext* beeping = static_cast<BeepingContext*>(beepingObject);
+  if (!beeping->mEncoder) return -1;
+  if (!stringToEncode || size <= 0) return -2;
+
+  // BEE-2354: Defensive validation at the public API boundary.
+  // The Beeping acoustic protocol supports payloads up to
+  // Globals::numWordTokens (9 chars). Larger payloads cannot be decoded by
+  // receivers and would cause buffer overflow.
+  if (size > Globals::numWordTokens) {
+    BERROR("BEEPING_Encode payload size {} exceeds max supported size {}", size,
+           Globals::numWordTokens);
+    return -2;
+  }
+
+  // Reject invalid non-base32 characters ([0-9a-vA-V])
+  for (int32_t i = 0; i < size; ++i) {
+    if (Globals::getIdxFromChar(stringToEncode[i]) < 0) {
+      BERROR("BEEPING_Encode invalid character '{}' at index {}",
+             stringToEncode[i], i);
+      return -2;
+    }
+  }
+
   BINFO("BEEPING_Encode payload=\"{}\" len={} type={}",
         std::string_view(stringToEncode, size), size, type);
-  BeepingContext* beeping = (BeepingContext*)beepingObject;
 
 #ifdef _ANDROID_LOG_
   //  __android_log_print(ANDROID_LOG_INFO, "BeepingCoreLibInfo",
@@ -388,6 +411,17 @@ extern "C"
   BeepingContext* beeping = static_cast<BeepingContext*>(beepingObject);
   if (!beeping->mEncoder) return -3;
   if (!code || codeSize <= 0) return -2;
+  if (codeSize > 5) {
+    BERROR("BEEPING_EncodeWithSchedule code size {} exceeds max 5", codeSize);
+    return -2;
+  }
+  for (int32_t i = 0; i < codeSize; ++i) {
+    if (Globals::getIdxFromChar(code[i]) < 0) {
+      BERROR("BEEPING_EncodeWithSchedule invalid character '{}' at index {}",
+             code[i], i);
+      return -2;
+    }
+  }
   if (duration < BEEPING::kMinBeepWindow || interval <= 0.0f ||
       startTime < 0.0f ||
       (startTime + BEEPING::kMinBeepWindow) > duration + 1e-6f) {
@@ -427,9 +461,9 @@ extern "C"
     std::string payload(code, static_cast<size_t>(codeSize));
     payload += tsB32;
 
-    beeping->mEncoder->EncodeDataToAudioBuffer(
-        payload.c_str(), type, static_cast<int>(payload.size()), melody,
-        melodySize);
+    beeping->mEncoder->EncodeDataToAudioBuffer(payload.c_str(), type,
+                                               static_cast<int>(payload.size()),
+                                               melody, melodySize);
 
     const int32_t offset = static_cast<int32_t>(std::floor(ts * sampleRate));
     int32_t writePos = offset;

@@ -63,9 +63,12 @@ int EncoderNonAudibleMultiTone::EncodeDataToAudioBuffer(
   digits.push_back(Globals::getIdxFromChar(
       m_config.frontDoorTokens[1]));  // front-door symbols
 
-  // Add user symbols
-  for (int i = 0; i < size; i++) {
-    digits.push_back(Globals::getIdxFromChar(stringToEncode[i]));
+  // Add user symbols (clamped to numWordTokens to guarantee bounded frame size)
+  const int effectiveSize = std::min(size, Globals::numWordTokens);
+  for (int i = 0; i < effectiveSize; i++) {
+    int idx = Globals::getIdxFromChar(stringToEncode[i]);
+    if (idx < 0) idx = 0;
+    digits.push_back(idx);
   }
 
   //  __android_log_print(ANDROID_LOG_INFO, "BeepingCoreLibInfo", "Added
@@ -141,7 +144,7 @@ int EncoderNonAudibleMultiTone::EncodeDataToAudioBuffer(
       }
     }
     /*
-        //BEGIN LEGATO WITH NEXT NOTE (for cross-fade or chirp between tones)
+        //BEGIN LEGATO WITH NEXT NOTE (for cross-fade or sweep between tones)
         float *nextFreqs = new float[2];
         if (i<(20-1))
           Globals::getFreqsFromIdxNonAudibleMultiTone(digits[i+1], mSampleRate,

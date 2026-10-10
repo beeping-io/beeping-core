@@ -385,12 +385,24 @@ void ReedSolomon::Decode() {
 
 // Voctro API functions
 // encoding
-void ReedSolomon::SetMessage(const std::vector<int> message) {
-  msg_len = message.size();  // update input message length for Shortened RS
+bool ReedSolomon::SetMessage(const std::vector<int>& message) {
+  // BEE-2354: Defensive guard against buffer overflow when message.size() > kk.
+  // The internal buffer `data` has fixed size `kk` (23). Writing past `kk`
+  // corrupts the heap.
+  if (static_cast<int>(message.size()) > kk) {
+    BWARN("ReedSolomon::SetMessage: message size {} exceeds capacity kk={}",
+          message.size(), kk);
+    msg_len = kk;
+    for (int i = 0; i < kk; ++i) data[i] = message[i];
+    return false;
+  }
+
+  msg_len = static_cast<int>(message.size());
   for (int i = 0; i < msg_len; ++i) data[i] = message[i];
 
   // pad with zeros for Shortened RS code.
   if (msg_len < kk) memset(data + msg_len, 0, (kk - msg_len) * sizeof(int));
+  return true;
 }
 
 void ReedSolomon::GetCode(std::vector<int>& code) {
@@ -424,8 +436,13 @@ void ReedSolomon::SetCode(const std::vector<int> code) {
     // check if this is necessary
     // convert received data from polynomial form to index form (as it was in
     // the example source code)
-    for (int i = 0; i < nn; i++)
-      recd[i] = index_of[recd[i]]; /* put recd[i] into index form */
+    for (int i = 0; i < nn; i++) {
+      if (recd[i] >= 0 && recd[i] <= nn) {
+        recd[i] = index_of[recd[i]]; /* put recd[i] into index form */
+      } else {
+        recd[i] = -1;
+      }
+    }
   }
 }
 
