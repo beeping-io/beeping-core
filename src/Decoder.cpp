@@ -245,32 +245,28 @@ int Decoder::DecodeAudioBuffer(float* /*audioBuffer*/, int /*size*/) {
 int Decoder::GetDecodedData(char* /*stringDecoded*/) { return -1; }
 
 float Decoder::GetConfidenceError() {
-  // mConfidence = mConfidenceEnergyRatios * mConfidenceCorrection;
-
-  return mConfidenceCorrection;
+  if (std::isnan(mConfidenceCorrection) || mConfidenceCorrection < 0.0f) {
+    return 0.0f;
+  }
+  return std::min(mConfidenceCorrection, 1.0f);
 }
 
 float Decoder::GetConfidenceNoise() {
-  // mConfidence = mConfidenceEnergyRatios * mConfidenceCorrection;
-
-  return mConfidenceEnergyRatios;
+  if (std::isnan(mConfidenceEnergyRatios) || mConfidenceEnergyRatios <= 0.0f) {
+    return 0.0f;
+  }
+  float confidenceEnergyRatiosNorm = mConfidenceEnergyRatios / 15.0f;
+  return std::min(confidenceEnergyRatiosNorm, 1.0f);
 }
 
 float Decoder::GetConfidence() {
-  // mConfidence = mConfidenceEnergyRatios * mConfidenceCorrection;
-
-  // calculate confidence:
-  // Energy ratios linear between 0(min)-15(max)
-  float confidenceEnergyRatiosNorm = 0.f;
-
-  if (mConfidenceEnergyRatios <= 0)
-    confidenceEnergyRatiosNorm = 0.f;
-  else if (mConfidenceEnergyRatios >= 15.f)
-    confidenceEnergyRatiosNorm = 1.f;
-  else
-    confidenceEnergyRatiosNorm = mConfidenceEnergyRatios / 15.f;
-
-  return confidenceEnergyRatiosNorm * mConfidenceCorrection;
+  float confidenceEnergyRatiosNorm = GetConfidenceNoise();
+  float confidenceError = GetConfidenceError();
+  float result = confidenceEnergyRatiosNorm * confidenceError;
+  if (std::isnan(result) || result < 0.0f) {
+    return 0.0f;
+  }
+  return std::min(result, 1.0f);
 }
 
 float Decoder::GetReceivedBeepsVolume() {
