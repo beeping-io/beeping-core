@@ -80,6 +80,27 @@ TEST_CASE("Version: GetVersionInfo fills buffer", "[version]") {
   int len = BEEPING_GetVersionInfo(buf);
   REQUIRE(len > 0);
   REQUIRE(len == static_cast<int>(std::strlen(buf)));
+  REQUIRE(std::strstr(buf, "1.0.0 [20220426]") == nullptr);
+#ifdef BEEPING_CORE_SEMVER
+  REQUIRE(std::strstr(buf, BEEPING_CORE_SEMVER) != nullptr);
+#endif
+}
+
+TEST_CASE(
+    "Version: GetVersion contains CMake project version and no legacy literal",
+    "[version]") {
+  const char* v = BEEPING_GetVersion();
+  REQUIRE(v != nullptr);
+#ifdef BEEPING_CORE_SEMVER
+  REQUIRE(std::strstr(v, BEEPING_CORE_SEMVER) != nullptr);
+#else
+  REQUIRE(std::strstr(v, "0.8.1") != nullptr);
+#endif
+  REQUIRE(std::strstr(v, "1.0.0 [20220426]") == nullptr);
+}
+
+TEST_CASE("Version: GetVersionInfo null buffer returns 0 safely", "[version]") {
+  REQUIRE(BEEPING_GetVersionInfo(nullptr) == 0);
 }
 
 // ===========================================================================
