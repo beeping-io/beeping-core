@@ -215,6 +215,7 @@ if(BUILD_TESTING AND NOT EMSCRIPTEN)
     tests/SchedulerTest.cpp
     tests/LoggerTest.cpp
     tests/CodecGuardTest.cpp
+    tests/NoiseImmunityTest.cpp
   )
   if(BEEPING_BUILD_CLI)
     list(APPEND BEEPING_TEST_SOURCES tests/CLIIntegrationTest.cpp)
