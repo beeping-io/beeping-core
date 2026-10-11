@@ -247,7 +247,11 @@ extern "C"
   BeepingContext* beeping = (BeepingContext*)beepingObject;
 
   int32_t rc = beeping->mDecoder->GetDecodedData(stringDecoded);
-  BINFO("BEEPING_GetDecodedData -> rc={} data=\"{}\"", rc, stringDecoded);
+  if (rc <= 0 && stringDecoded) {
+    stringDecoded[0] = '\0';
+  }
+  BINFO("BEEPING_GetDecodedData -> rc={} data=\"{}\"", rc,
+        stringDecoded ? stringDecoded : "(null)");
   return rc;
 }
 
@@ -427,9 +431,9 @@ extern "C"
     std::string payload(code, static_cast<size_t>(codeSize));
     payload += tsB32;
 
-    beeping->mEncoder->EncodeDataToAudioBuffer(
-        payload.c_str(), type, static_cast<int>(payload.size()), melody,
-        melodySize);
+    beeping->mEncoder->EncodeDataToAudioBuffer(payload.c_str(), type,
+                                               static_cast<int>(payload.size()),
+                                               melody, melodySize);
 
     const int32_t offset = static_cast<int32_t>(std::floor(ts * sampleRate));
     int32_t writePos = offset;

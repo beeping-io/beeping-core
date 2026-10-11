@@ -141,7 +141,7 @@ int EncoderNonAudibleMultiTone::EncodeDataToAudioBuffer(
       }
     }
     /*
-        //BEGIN LEGATO WITH NEXT NOTE (for cross-fade or chirp between tones)
+        //BEGIN LEGATO WITH NEXT NOTE (for cross-fade or sweep between tones)
         float *nextFreqs = new float[2];
         if (i<(20-1))
           Globals::getFreqsFromIdxNonAudibleMultiTone(digits[i+1], mSampleRate,
