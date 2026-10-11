@@ -80,8 +80,8 @@ std::vector<float> encode_to_samples(int mode, float sample_rate,
   REQUIRE(encoder != nullptr);
   REQUIRE(BEEPING_Configure(mode, sample_rate, 1024, encoder) == 0);
   const int len = static_cast<int>(std::strlen(payload));
-  const int total = BEEPING_EncodeDataToAudioBuffer(payload, len, 0, nullptr,
-                                                    0, encoder);
+  const int total =
+      BEEPING_EncodeDataToAudioBuffer(payload, len, 0, nullptr, 0, encoder);
   REQUIRE(total > 0);
   std::vector<float> audio;
   audio.reserve(static_cast<std::size_t>(total));
@@ -102,11 +102,11 @@ std::pair<int, std::string> run_cli(const std::string& args) {
   // a quoted binary path AND a quoted argument. Wrap in an extra pair of
   // quotes to survive that strip.
 #ifdef _WIN32
-  std::string full = "\"\"" + std::string(BEEPING_CLI_BINARY) + "\" " + args +
-                     " 2>&1\"";
+  std::string full =
+      "\"\"" + std::string(BEEPING_CLI_BINARY) + "\" " + args + " 2>&1\"";
 #else
-  std::string full = "\"" + std::string(BEEPING_CLI_BINARY) + "\" " + args +
-                     " 2>&1";
+  std::string full =
+      "\"" + std::string(BEEPING_CLI_BINARY) + "\" " + args + " 2>&1";
 #endif
   FILE* pipe = POPEN(full.c_str(), "r");
   REQUIRE(pipe != nullptr);
@@ -129,6 +129,8 @@ TEST_CASE("CLI: version command prints library version", "[cli]") {
   auto [rc, out] = run_cli("version");
   REQUIRE(rc == 0);
   REQUIRE(out.find("BeepingCoreLib") != std::string::npos);
+  REQUIRE(out.find("1.0.0 [20220426]") == std::string::npos);
+  REQUIRE(out.find("0.8.1") != std::string::npos);
 }
 
 TEST_CASE("CLI: help command exits cleanly", "[cli]") {
@@ -138,8 +140,7 @@ TEST_CASE("CLI: help command exits cleanly", "[cli]") {
 }
 
 TEST_CASE("CLI: missing file returns exit code 2", "[cli]") {
-  auto [rc, out] =
-      run_cli("decode /definitely/not/a/real/file/path/xyz.wav");
+  auto [rc, out] = run_cli("decode /definitely/not/a/real/file/path/xyz.wav");
   REQUIRE(rc == 2);
   REQUIRE(out.find("cannot open") != std::string::npos);
 }
@@ -155,8 +156,8 @@ TEST_CASE("WAV round-trip without CLI subprocess", "[wav][roundtrip]") {
   const char* payload = "123456789";
   auto samples = encode_to_samples(BEEPING_MODE_AUDIBLE, kSampleRate, payload);
   INFO("Encoder produced " << samples.size() << " samples");
-  auto wav_path = std::filesystem::temp_directory_path() /
-                  "beeping_wav_roundtrip_test.wav";
+  auto wav_path =
+      std::filesystem::temp_directory_path() / "beeping_wav_roundtrip_test.wav";
   REQUIRE(write_wav_float32_mono(wav_path.string(), samples,
                                  static_cast<int>(kSampleRate)));
 
@@ -185,7 +186,7 @@ TEST_CASE("WAV round-trip without CLI subprocess", "[wav][roundtrip]") {
   char decoded[32] = {0};
   int len = BEEPING_GetDecodedData(decoded, dec);
   INFO("Decoded directly: '" << std::string(decoded, decoded + std::max(0, len))
-                              << "' len=" << len);
+                             << "' len=" << len);
   BEEPING_Destroy(dec);
   REQUIRE(len > 0);
   std::filesystem::remove(wav_path);
@@ -196,8 +197,8 @@ TEST_CASE("CLI: decode round-trip audible mode", "[cli][roundtrip]") {
   const char* payload = "123456789";
 
   auto samples = encode_to_samples(BEEPING_MODE_AUDIBLE, kSampleRate, payload);
-  auto wav_path = std::filesystem::temp_directory_path() /
-                  "beeping_cli_audible_test.wav";
+  auto wav_path =
+      std::filesystem::temp_directory_path() / "beeping_cli_audible_test.wav";
   REQUIRE(write_wav_float32_mono(wav_path.string(), samples,
                                  static_cast<int>(kSampleRate)));
 

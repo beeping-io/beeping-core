@@ -21,7 +21,11 @@
 #include <string_view>
 #include <vector>
 
-static const char version[100] = "BeepingCoreLib version 1.0.0 [20220426]";
+#ifndef BEEPING_CORE_FULL_VERSION_STRING
+#define BEEPING_CORE_FULL_VERSION_STRING "BeepingCoreLib version 0.8.1"
+#endif
+
+static const char version[] = BEEPING_CORE_FULL_VERSION_STRING;
 
 using namespace BEEPING;
 
@@ -85,12 +89,16 @@ extern "C"
 #ifdef __cplusplus
 extern "C"
 #endif  //__cplusplus
-    int BEEPING_GetVersionInfo(char* versioninfo) {
+    int32_t BEEPING_GetVersionInfo(char* versioninfo) {
+  if (!versioninfo) {
+    BWARN("BEEPING_GetVersionInfo: null buffer");
+    return 0;
+  }
   snprintf(versioninfo, 100, "%s", version);
 
   BTRACE("BEEPING_GetVersionInfo -> {} (len={})", versioninfo,
          strlen(versioninfo));
-  return strlen(versioninfo);
+  return static_cast<int32_t>(strlen(versioninfo));
 }
 
 #ifdef __cplusplus
@@ -427,9 +435,9 @@ extern "C"
     std::string payload(code, static_cast<size_t>(codeSize));
     payload += tsB32;
 
-    beeping->mEncoder->EncodeDataToAudioBuffer(
-        payload.c_str(), type, static_cast<int>(payload.size()), melody,
-        melodySize);
+    beeping->mEncoder->EncodeDataToAudioBuffer(payload.c_str(), type,
+                                               static_cast<int>(payload.size()),
+                                               melody, melodySize);
 
     const int32_t offset = static_cast<int32_t>(std::floor(ts * sampleRate));
     int32_t writePos = offset;
