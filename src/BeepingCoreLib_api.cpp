@@ -255,9 +255,18 @@ extern "C"
 extern "C"
 #endif  //__cplusplus
     float BEEPING_GetConfidenceError(void* beepingObject) {
+  if (!beepingObject) {
+    BWARN("BEEPING_GetConfidenceError: null handle");
+    return 0.0f;
+  }
   BeepingContext* beeping = (BeepingContext*)beepingObject;
+  if (!beeping->mDecoder) {
+    BWARN("BEEPING_GetConfidenceError: unconfigured core");
+    return 0.0f;
+  }
 
-  float result = beeping->mDecoder->GetConfidenceError();
+  float raw = beeping->mDecoder->GetConfidenceError();
+  float result = (std::isnan(raw) || raw < 0.0f) ? 0.0f : std::min(raw, 1.0f);
   BTRACE("BEEPING_GetConfidenceError -> {:.4f}", result);
   return result;
 }
@@ -266,9 +275,18 @@ extern "C"
 extern "C"
 #endif  //__cplusplus
     float BEEPING_GetConfidenceNoise(void* beepingObject) {
+  if (!beepingObject) {
+    BWARN("BEEPING_GetConfidenceNoise: null handle");
+    return 0.0f;
+  }
   BeepingContext* beeping = (BeepingContext*)beepingObject;
+  if (!beeping->mDecoder) {
+    BWARN("BEEPING_GetConfidenceNoise: unconfigured core");
+    return 0.0f;
+  }
 
-  float result = beeping->mDecoder->GetConfidenceNoise();
+  float raw = beeping->mDecoder->GetConfidenceNoise();
+  float result = (std::isnan(raw) || raw < 0.0f) ? 0.0f : std::min(raw, 1.0f);
   BTRACE("BEEPING_GetConfidenceNoise -> {:.4f}", result);
   return result;
 }
@@ -277,10 +295,18 @@ extern "C"
 extern "C"
 #endif  //__cplusplus
     float BEEPING_GetConfidence(void* beepingObject) {
+  if (!beepingObject) {
+    BWARN("BEEPING_GetConfidence: null handle");
+    return 0.0f;
+  }
   BeepingContext* beeping = (BeepingContext*)beepingObject;
+  if (!beeping->mDecoder) {
+    BWARN("BEEPING_GetConfidence: unconfigured core");
+    return 0.0f;
+  }
 
-  // return (beeping->mDecoder->GetConfidence()/2.f)+0.5f;
-  float result = beeping->mDecoder->GetConfidence();
+  float raw = beeping->mDecoder->GetConfidence();
+  float result = (std::isnan(raw) || raw < 0.0f) ? 0.0f : std::min(raw, 1.0f);
   BTRACE("BEEPING_GetConfidence -> {:.4f}", result);
   return result;
 }
@@ -427,9 +453,9 @@ extern "C"
     std::string payload(code, static_cast<size_t>(codeSize));
     payload += tsB32;
 
-    beeping->mEncoder->EncodeDataToAudioBuffer(
-        payload.c_str(), type, static_cast<int>(payload.size()), melody,
-        melodySize);
+    beeping->mEncoder->EncodeDataToAudioBuffer(payload.c_str(), type,
+                                               static_cast<int>(payload.size()),
+                                               melody, melodySize);
 
     const int32_t offset = static_cast<int32_t>(std::floor(ts * sampleRate));
     int32_t writePos = offset;
