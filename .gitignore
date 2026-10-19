@@ -3,8 +3,10 @@ logs/
 
 # Build
 build/
+build-*/
 cmake-build-*/
 out/
+BeepingCore.xcframework/
 
 # Compiled objects
 *.o

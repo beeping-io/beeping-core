@@ -22,6 +22,25 @@ option(BEEPING_ENABLE_UBSAN "Build with UndefinedBehaviorSanitizer" OFF)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(Sanitizers)
 
+# --- Version configuration ---
+find_package(Git QUIET)
+set(BEEPING_GIT_DESCRIBE "")
+if(GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
+  execute_process(
+    COMMAND ${GIT_EXECUTABLE} describe --tags --always --dirty
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    OUTPUT_VARIABLE BEEPING_GIT_DESCRIBE
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+  )
+endif()
+
+if(BEEPING_GIT_DESCRIBE)
+  set(BEEPING_CORE_FULL_VERSION_STRING "BeepingCoreLib version ${PROJECT_VERSION} [${BEEPING_GIT_DESCRIBE}]")
+else()
+  set(BEEPING_CORE_FULL_VERSION_STRING "BeepingCoreLib version ${PROJECT_VERSION}")
+endif()
+
 # --- spdlog (dual-mode: external via find_package, fallback to FetchContent) ---
 #
 # BEEPING_USE_EXTERNAL_SPDLOG=ON (auto-ON when built via Conan/package manager):
@@ -106,6 +125,11 @@ else()
   target_include_directories(BeepingCore PRIVATE ${BEEPING_SPDLOG_INCLUDE_DIR})
   target_compile_definitions(BeepingCore PRIVATE SPDLOG_HEADER_ONLY)
 endif()
+
+target_compile_definitions(BeepingCore PRIVATE
+  BEEPING_CORE_FULL_VERSION_STRING="${BEEPING_CORE_FULL_VERSION_STRING}"
+  BEEPING_CORE_SEMVER="${PROJECT_VERSION}"
+)
 
 if(BEEPING_ENABLE_TSAN)
   beeping_enable_tsan(BeepingCore)
@@ -215,6 +239,7 @@ if(BUILD_TESTING AND NOT EMSCRIPTEN)
     tests/SchedulerTest.cpp
     tests/LoggerTest.cpp
     tests/CodecGuardTest.cpp
+    tests/NoiseImmunityTest.cpp
   )
   if(BEEPING_BUILD_CLI)
     list(APPEND BEEPING_TEST_SOURCES tests/CLIIntegrationTest.cpp)
@@ -225,7 +250,10 @@ if(BUILD_TESTING AND NOT EMSCRIPTEN)
   target_include_directories(BeepingCoreTests PRIVATE
     ${spdlog_SOURCE_DIR}/include
   )
-  target_compile_definitions(BeepingCoreTests PRIVATE SPDLOG_HEADER_ONLY)
+  target_compile_definitions(BeepingCoreTests PRIVATE
+    SPDLOG_HEADER_ONLY
+    BEEPING_CORE_SEMVER="${PROJECT_VERSION}"
+  )
   if(BEEPING_BUILD_CLI)
     add_dependencies(BeepingCoreTests beeping_core_cli)
     target_compile_definitions(BeepingCoreTests PRIVATE

@@ -21,7 +21,11 @@
 #include <string_view>
 #include <vector>
 
-static const char version[100] = "BeepingCoreLib version 1.0.0 [20220426]";
+#ifndef BEEPING_CORE_FULL_VERSION_STRING
+#define BEEPING_CORE_FULL_VERSION_STRING "BeepingCoreLib version 0.8.1"
+#endif
+
+static const char version[] = BEEPING_CORE_FULL_VERSION_STRING;
 
 using namespace BEEPING;
 
@@ -85,12 +89,16 @@ extern "C"
 #ifdef __cplusplus
 extern "C"
 #endif  //__cplusplus
-    int BEEPING_GetVersionInfo(char* versioninfo) {
+    int32_t BEEPING_GetVersionInfo(char* versioninfo) {
+  if (!versioninfo) {
+    BWARN("BEEPING_GetVersionInfo: null buffer");
+    return 0;
+  }
   snprintf(versioninfo, 100, "%s", version);
 
   BTRACE("BEEPING_GetVersionInfo -> {} (len={})", versioninfo,
          strlen(versioninfo));
-  return strlen(versioninfo);
+  return static_cast<int32_t>(strlen(versioninfo));
 }
 
 #ifdef __cplusplus
@@ -270,7 +278,11 @@ extern "C"
   BeepingContext* beeping = (BeepingContext*)beepingObject;
 
   int32_t rc = beeping->mDecoder->GetDecodedData(stringDecoded);
-  BINFO("BEEPING_GetDecodedData -> rc={} data=\"{}\"", rc, stringDecoded);
+  if (rc <= 0 && stringDecoded) {
+    stringDecoded[0] = '\0';
+  }
+  BINFO("BEEPING_GetDecodedData -> rc={} data=\"{}\"", rc,
+        stringDecoded ? stringDecoded : "(null)");
   return rc;
 }
 
@@ -278,9 +290,18 @@ extern "C"
 extern "C"
 #endif  //__cplusplus
     float BEEPING_GetConfidenceError(void* beepingObject) {
+  if (!beepingObject) {
+    BWARN("BEEPING_GetConfidenceError: null handle");
+    return 0.0f;
+  }
   BeepingContext* beeping = (BeepingContext*)beepingObject;
+  if (!beeping->mDecoder) {
+    BWARN("BEEPING_GetConfidenceError: unconfigured core");
+    return 0.0f;
+  }
 
-  float result = beeping->mDecoder->GetConfidenceError();
+  float raw = beeping->mDecoder->GetConfidenceError();
+  float result = (std::isnan(raw) || raw < 0.0f) ? 0.0f : std::min(raw, 1.0f);
   BTRACE("BEEPING_GetConfidenceError -> {:.4f}", result);
   return result;
 }
@@ -289,9 +310,18 @@ extern "C"
 extern "C"
 #endif  //__cplusplus
     float BEEPING_GetConfidenceNoise(void* beepingObject) {
+  if (!beepingObject) {
+    BWARN("BEEPING_GetConfidenceNoise: null handle");
+    return 0.0f;
+  }
   BeepingContext* beeping = (BeepingContext*)beepingObject;
+  if (!beeping->mDecoder) {
+    BWARN("BEEPING_GetConfidenceNoise: unconfigured core");
+    return 0.0f;
+  }
 
-  float result = beeping->mDecoder->GetConfidenceNoise();
+  float raw = beeping->mDecoder->GetConfidenceNoise();
+  float result = (std::isnan(raw) || raw < 0.0f) ? 0.0f : std::min(raw, 1.0f);
   BTRACE("BEEPING_GetConfidenceNoise -> {:.4f}", result);
   return result;
 }
@@ -300,10 +330,18 @@ extern "C"
 extern "C"
 #endif  //__cplusplus
     float BEEPING_GetConfidence(void* beepingObject) {
+  if (!beepingObject) {
+    BWARN("BEEPING_GetConfidence: null handle");
+    return 0.0f;
+  }
   BeepingContext* beeping = (BeepingContext*)beepingObject;
+  if (!beeping->mDecoder) {
+    BWARN("BEEPING_GetConfidence: unconfigured core");
+    return 0.0f;
+  }
 
-  // return (beeping->mDecoder->GetConfidence()/2.f)+0.5f;
-  float result = beeping->mDecoder->GetConfidence();
+  float raw = beeping->mDecoder->GetConfidence();
+  float result = (std::isnan(raw) || raw < 0.0f) ? 0.0f : std::min(raw, 1.0f);
   BTRACE("BEEPING_GetConfidence -> {:.4f}", result);
   return result;
 }

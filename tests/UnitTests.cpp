@@ -80,6 +80,27 @@ TEST_CASE("Version: GetVersionInfo fills buffer", "[version]") {
   int len = BEEPING_GetVersionInfo(buf);
   REQUIRE(len > 0);
   REQUIRE(len == static_cast<int>(std::strlen(buf)));
+  REQUIRE(std::strstr(buf, "1.0.0 [20220426]") == nullptr);
+#ifdef BEEPING_CORE_SEMVER
+  REQUIRE(std::strstr(buf, BEEPING_CORE_SEMVER) != nullptr);
+#endif
+}
+
+TEST_CASE(
+    "Version: GetVersion contains CMake project version and no legacy literal",
+    "[version]") {
+  const char* v = BEEPING_GetVersion();
+  REQUIRE(v != nullptr);
+#ifdef BEEPING_CORE_SEMVER
+  REQUIRE(std::strstr(v, BEEPING_CORE_SEMVER) != nullptr);
+#else
+  REQUIRE(std::strstr(v, "0.8.1") != nullptr);
+#endif
+  REQUIRE(std::strstr(v, "1.0.0 [20220426]") == nullptr);
+}
+
+TEST_CASE("Version: GetVersionInfo null buffer returns 0 safely", "[version]") {
+  REQUIRE(BEEPING_GetVersionInfo(nullptr) == 0);
 }
 
 // ===========================================================================
@@ -224,9 +245,67 @@ TEST_CASE("Confidence: initial values in valid range", "[confidence]") {
   REQUIRE(conf >= 0.0f);
   REQUIRE(conf <= 1.0f);
   REQUIRE(confErr >= 0.0f);
+  REQUIRE(confErr <= 1.0f);
   REQUIRE(confNoise >= 0.0f);
+  REQUIRE(confNoise <= 1.0f);
   // Volume — just verify it doesn't crash
   BEEPING_GetReceivedBeepsVolume(c.handle);
+}
+
+TEST_CASE("Confidence: null or unconfigured core returns 0.0f safely",
+          "[confidence]") {
+  REQUIRE(BEEPING_GetConfidence(nullptr) == 0.0f);
+  REQUIRE(BEEPING_GetConfidenceError(nullptr) == 0.0f);
+  REQUIRE(BEEPING_GetConfidenceNoise(nullptr) == 0.0f);
+
+  void* unconfigured = BEEPING_Create();
+  REQUIRE(BEEPING_GetConfidence(unconfigured) == 0.0f);
+  REQUIRE(BEEPING_GetConfidenceError(unconfigured) == 0.0f);
+  REQUIRE(BEEPING_GetConfidenceNoise(unconfigured) == 0.0f);
+  BEEPING_Destroy(unconfigured);
+}
+
+TEST_CASE("Confidence: values remain strictly within [0.0, 1.0] after decoding",
+          "[confidence]") {
+  ScopedCore enc;
+  enc.configure(BEEPING_MODE_AUDIBLE);
+  ScopedCore dec;
+  dec.configure(BEEPING_MODE_AUDIBLE);
+
+  int numSamples = enc.encode("123456789");
+  REQUIRE(numSamples > 0);
+  auto audio = enc.drainEncoded();
+
+  int bufSize = 1024;
+  for (size_t i = 0; i < audio.size(); i += static_cast<size_t>(bufSize)) {
+    int chunkSize = std::min(bufSize, static_cast<int>(audio.size() - i));
+    BEEPING_DecodeAudioBuffer(audio.data() + i, chunkSize, dec.handle);
+  }
+
+  float conf = BEEPING_GetConfidence(dec.handle);
+  float confErr = BEEPING_GetConfidenceError(dec.handle);
+  float confNoise = BEEPING_GetConfidenceNoise(dec.handle);
+
+  REQUIRE(conf >= 0.0f);
+  REQUIRE(conf <= 1.0f);
+  REQUIRE(confErr >= 0.0f);
+  REQUIRE(confErr <= 1.0f);
+  REQUIRE(confNoise >= 0.0f);
+  REQUIRE(confNoise <= 1.0f);
+
+  std::vector<float> silence(1024, 0.0f);
+  for (int i = 0; i < 50; ++i) {
+    BEEPING_DecodeAudioBuffer(silence.data(), 1024, dec.handle);
+  }
+  conf = BEEPING_GetConfidence(dec.handle);
+  confErr = BEEPING_GetConfidenceError(dec.handle);
+  confNoise = BEEPING_GetConfidenceNoise(dec.handle);
+  REQUIRE(conf >= 0.0f);
+  REQUIRE(conf <= 1.0f);
+  REQUIRE(confErr >= 0.0f);
+  REQUIRE(confErr <= 1.0f);
+  REQUIRE(confNoise >= 0.0f);
+  REQUIRE(confNoise <= 1.0f);
 }
 
 // ===========================================================================

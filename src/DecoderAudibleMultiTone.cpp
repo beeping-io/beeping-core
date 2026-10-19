@@ -188,6 +188,16 @@ int DecoderAudibleMultiTone::DecodeAudioBuffer(float* audioBuffer, int size) {
 
       mReceivedBeepsVolume = mReceivedBeepsVolume / Globals::numMessageTokens;
 
+      if (mConfidenceEnergyRatios < 1.0f) {
+        BWARN(
+            "DecoderAudibleMultiTone::DecodeAudioBuffer spurious packet "
+            "rejected "
+            "due to low confidence ({:.2f} < 1.0)",
+            mConfidenceEnergyRatios);
+        mDecodedValues.clear();
+        return -1;
+      }
+
       BINFO("DecoderAudibleMultiTone::DecodeAudioBuffer WORD COMPLETE");
       BTRACE("DecoderAudibleMultiTone::DecodeAudioBuffer -> {}", -3);
       return -3;  //-3 means that complete word has been decoded
@@ -252,9 +262,20 @@ int DecoderAudibleMultiTone::GetDecodedData(char* stringDecoded) {
 
   if (checkToken != checkTokenReceived) messageOk = -1;
 
-  memset(mDecodedString, 0, MAX_DECODE_STRING_SIZE * sizeof(char));
-
   int len = mDecodedValues.size() - 1;
+  if (messageOk != 1 || mConfidenceEnergyRatios < 1.0f) {
+    if (stringDecoded) stringDecoded[0] = '\0';
+    memset(mDecodedString, 0, MAX_DECODE_STRING_SIZE * sizeof(char));
+    mDecodedValues.clear();
+    int result = (len - Globals::numFrontDoorTokens) * -1;
+    BINFO(
+        "DecoderAudibleMultiTone::GetDecodedData -> rc={} (integrity check "
+        "failed)",
+        result);
+    return result;
+  }
+
+  memset(mDecodedString, 0, MAX_DECODE_STRING_SIZE * sizeof(char));
 
   for (int i = Globals::numFrontDoorTokens; i < len; ++i) {
     mDecodedString[i - Globals::numFrontDoorTokens] =
@@ -323,10 +344,14 @@ int DecoderAudibleMultiTone::AnalyzeStartTokens(
     }
   }
 
-  int idx_a1 = mEnergyRatiosIdx[0];
-  int idx_a2 = mEnergyRatiosIdx[1];
-  int idx_a3 = mEnergyRatiosIdx[2];
-  int idx_a4 = mEnergyRatiosIdx[3];
+  // BEE-2353: In pink/ambient noise, the lowest tone sits at ~2-3 dB SNR due to
+  // 1/f tilt. Real beeps transmit pure tones at >= 10-30 dB SNR. Requiring
+  // >= 5.0 dB on top tone rejects pink and white noise while reliably detecting
+  // real beeps.
+  int idx_a1 = (mEnergyRatiosSorted[0] >= 5.0f) ? mEnergyRatiosIdx[0] : -1;
+  int idx_a2 = (mEnergyRatiosSorted[1] >= 4.0f) ? mEnergyRatiosIdx[1] : -1;
+  int idx_a3 = (mEnergyRatiosSorted[2] >= 3.0f) ? mEnergyRatiosIdx[2] : -1;
+  int idx_a4 = (mEnergyRatiosSorted[3] >= 2.0f) ? mEnergyRatiosIdx[3] : -1;
 
   int pos = mWritePosInBlockCircularBuffer % mSizeBlockCircularBuffer;
   mBlockEnergyRatiosTokenIdx[pos] = idx_a1;
@@ -370,27 +395,30 @@ int DecoderAudibleMultiTone::AnalyzeStartTokens(
 
   while (getSizeFilledBlockCircularBuffer() >= mSizeBlockCircularBuffer - 1) {
     int firstTokenRepetitions = 0;
+    int t1 = idxTonesFrontDoorToken1[0];
     for (int i = 0; i < (mSizeBlockCircularBuffer / 2); i++) {
       int posIdx =
           (mReadPosInBlockCircularBuffer + i) % mSizeBlockCircularBuffer;
 
-      if (mBlockEnergyRatiosTokenIdx[posIdx] == idxTonesFrontDoorToken1[0])
+      if (mBlockEnergyRatiosTokenIdx[posIdx] == t1) {
         firstTokenRepetitions++;
+      }
     }
 
     // Only continue if long firstToken is found
     if (firstTokenRepetitions >=
         ((mSizeBlockCircularBuffer / 2) - mnToleranceFrames)) {
       int secondTokenRepetitions = 0;
+      int t2 = idxTonesFrontDoorToken2[0];
       for (int i = (mSizeBlockCircularBuffer / 2); i < mSizeBlockCircularBuffer;
            i++) {
         int posIdx =
             (mReadPosInBlockCircularBuffer + i) % mSizeBlockCircularBuffer;
 
-        if ((mBlockEnergyRatiosTokenIdx[posIdx] ==
-             idxTonesFrontDoorToken2[0]) ||
-            (mBlockEnergyRatiosTokenIdx2[posIdx] == idxTonesFrontDoorToken2[0]))
+        if (mBlockEnergyRatiosTokenIdx[posIdx] == t2 ||
+            mBlockEnergyRatiosTokenIdx2[posIdx] == t2) {
           secondTokenRepetitions++;
+        }
       }
 
       if (secondTokenRepetitions >=
@@ -585,6 +613,13 @@ int DecoderAudibleMultiTone::ComputeStatsStartTokens() {
   }
   energyBlock = energyBlock / (float)(mEndBin - mBeginBin + 1);
 
+  if (energyBlock < 1e-4f) {
+    for (int i = 0; i < mNumTones; i++) {
+      mEnergyRatios[i] = -100.0f;
+    }
+    return 0;
+  }
+
   for (int i = 0; i < mNumTones; i++) {
     int evalToneBin = mFreqsBins[i];
 
@@ -598,8 +633,12 @@ int DecoderAudibleMultiTone::ComputeStatsStartTokens() {
     double sum = Globals::sum(mEvalToneMags, mSizeTokenBinAnal);
     double energyTone = sum / mSizeTokenBinAnal;
 
-    mEnergyRatios[i] =
-        20.0 * log10((energyTone) / energyBlock);  // difference of 3dB
+    if (energyTone <= 1e-7) {
+      mEnergyRatios[i] = -100.0f;
+    } else {
+      mEnergyRatios[i] =
+          20.0 * log10((energyTone) / energyBlock);  // difference of 3dB
+    }
   }
 
   return 0;
