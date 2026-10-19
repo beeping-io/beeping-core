@@ -130,7 +130,11 @@ TEST_CASE("CLI: version command prints library version", "[cli]") {
   REQUIRE(rc == 0);
   REQUIRE(out.find("BeepingCoreLib") != std::string::npos);
   REQUIRE(out.find("1.0.0 [20220426]") == std::string::npos);
-  REQUIRE(out.find("0.8.1") != std::string::npos);
+#ifdef BEEPING_CORE_SEMVER
+  REQUIRE(out.find(BEEPING_CORE_SEMVER) != std::string::npos);
+#else
+  REQUIRE(out.find("0.8.2") != std::string::npos);
+#endif
 }
 
 TEST_CASE("CLI: help command exits cleanly", "[cli]") {

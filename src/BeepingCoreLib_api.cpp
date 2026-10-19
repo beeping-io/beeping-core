@@ -22,7 +22,7 @@
 #include <vector>
 
 #ifndef BEEPING_CORE_FULL_VERSION_STRING
-#define BEEPING_CORE_FULL_VERSION_STRING "BeepingCoreLib version 0.8.1"
+#define BEEPING_CORE_FULL_VERSION_STRING "BeepingCoreLib version 0.8.2"
 #endif
 
 static const char version[] = BEEPING_CORE_FULL_VERSION_STRING;
